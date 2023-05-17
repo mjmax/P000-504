@@ -1,0 +1,83 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Build and burn",
+			"command": "W:\\utility\\MinGW\\bin\\mingw32-make.exe",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"args": [
+				"clean",
+				"build",
+				"burn"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Burn current",
+			"command": "W:\\utility\\MinGW\\bin\\mingw32-make.exe",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"args": [
+				"burn"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},		
+		{
+			"type": "shell",
+			"label": "Build",
+			"command": "W:\\utility\\MinGW\\bin\\mingw32-make.exe",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"args": [
+				"build"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Rebuild",
+			"command": "W:\\utility\\MinGW\\bin\\mingw32-make.exe",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"args": [
+				"clean",
+				"build"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Clean",
+			"command": "W:\\utility\\MinGW\\bin\\mingw32-make.exe",
+			"problemMatcher": [
+				"$gcc"
+			],
+			"args": [
+				"clean"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			}
+		},
+	]
+}
