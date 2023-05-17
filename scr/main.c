@@ -1,7 +1,4 @@
-#define F_CPU 16000000UL
-#ifndef __AVR_ATmega328P__
-#define __AVR_ATmega328P__
-#endif
+#include "avrdet.h"
 #include <avr/io.h>
 #include <util/delay.h>
 
