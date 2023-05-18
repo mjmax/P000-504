@@ -6,4 +6,6 @@
 #define __AVR_ATmega328P__
 #endif
 
+#define NULL ((void *)0)
+
 #endif /* AVRDET_H_ */

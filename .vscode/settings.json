@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "io.h": "c",
+        "iom328p.h": "c",
+        "stdint.h": "c",
+        "usart_int.h": "c"
+    }
+}

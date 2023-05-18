@@ -2,7 +2,7 @@
 Dynamixel AX-18A Servo motor drive with atmega328P
 
 # Summery
-This project is created to investigate the feasibiliy of using atmega328p microcontroller to control the Dynemixel AX-a8A servo motor
+This project is created to investigate the feasibiliy of using atmega328p microcontroller to control the Dynemixel AX-18A servo motor
 
 # Build Information
 
@@ -37,3 +37,4 @@ W:\utility\Arduino\hardware\tools\avr\bin\avr-gcc
 
 * Add task.json file to .vscode folder to specify the build task
 * Build the project by clicking Terminal -> Run Task
+* For more details [Click here](https://www.instructables.com/Programming-AVR-Chips-Using-Visual-Studio-Code/)
