@@ -1,7 +1,7 @@
 /***********************************************************************
 MODULE:    	FIFO BUFFER
 VERSION:   	1.01
-CONTAINS:  	FIFO buffer
+CONTAINS:  	FIFO buffer implementation
 COPYRIGHT: 	
 DATE: 		9 Mar 2004
 NOTES:
@@ -10,9 +10,8 @@ NOTES:
 #ifndef _FIFOH_
 #define _FIFOH_
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "avrdet.h"
+#include "types.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -23,13 +22,14 @@ NOTES:
 //  This allows the size of each to be controlled without utilising malloc
 //
 
-struct s_fifo_ctl
+struct t_fifo_ctl
 {
-  uint8_t *pucBuffer;
-  uint8_t ucBufferSize;
-  uint8_t ucHeadIndex;
-  uint8_t ucTailIndex;
-  uint8_t ucFree;
+  int8u *pucBuffer;
+  int8u ucBufferSize;
+  int8u ucHeadIndex;
+  int8u ucTailIndex;
+  int8u ucFree;
+  int8u ucInitialised;
 };
 
 
@@ -44,7 +44,7 @@ struct s_fifo_ctl
 //
 //
 
-void FifoInit(struct s_fifo_ctl *psBufferStruct, uint8_t *pucBuffer, uint8_t ucBufferSize);
+void FifoInit(struct t_fifo_ctl *psBufferStruct, int8u *pucBuffer, int8u ucBufferSize);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ void FifoInit(struct s_fifo_ctl *psBufferStruct, uint8_t *pucBuffer, uint8_t ucB
 // Notes:
 //
 
-void FifoFlushBuffer(struct s_fifo_ctl *psBufferStruct);
+void FifoFlushBuffer(struct t_fifo_ctl *psBufferStruct);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ void FifoFlushBuffer(struct s_fifo_ctl *psBufferStruct);
 //   ignored (may be lost)
 //
 
-bool FifoPutChar(struct s_fifo_ctl *psBufferStruct, uint8_t ucData);
+void FifoPutChar(struct t_fifo_ctl *psBufferStruct, int8u ucData);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -85,7 +85,7 @@ bool FifoPutChar(struct s_fifo_ctl *psBufferStruct, uint8_t ucData);
 //
 //
 
-uint8_t FifoPutString(struct s_fifo_ctl *psBufferStruct, const uint8_t *pucData, uint8_t ucSize);
+int8u FifoPutString(struct t_fifo_ctl *psBufferStruct, const int8u *pucData, int8u ucSize);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -98,7 +98,7 @@ uint8_t FifoPutString(struct s_fifo_ctl *psBufferStruct, const uint8_t *pucData,
 //   returned
 //
 
-bool FifoGetChar(struct s_fifo_ctl *psBufferStruct, uint8_t *data);
+int8u FifoGetChar(struct t_fifo_ctl *psBufferStruct);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +114,7 @@ bool FifoGetChar(struct s_fifo_ctl *psBufferStruct, uint8_t *data);
 //
 //
 
-uint8_t FifoGetString(struct s_fifo_ctl *psBufferStruct, uint8_t *pucData, uint8_t ucSize);
+int8u FifoGetString(struct t_fifo_ctl *psBufferStruct, int8u *pucData, int8u ucSize);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +126,7 @@ uint8_t FifoGetString(struct s_fifo_ctl *psBufferStruct, uint8_t *pucData, uint8
 //
 //
 
-uint8_t FifoFree(struct s_fifo_ctl *psBufferStruct);
+int8u FifoFree(struct t_fifo_ctl *psBufferStruct);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -138,7 +138,7 @@ uint8_t FifoFree(struct s_fifo_ctl *psBufferStruct);
 //
 //
 
-uint8_t FifoUsed(struct s_fifo_ctl *psBufferStruct);
+int8u FifoUsed(struct t_fifo_ctl *psBufferStruct);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -151,7 +151,7 @@ uint8_t FifoUsed(struct s_fifo_ctl *psBufferStruct);
 //
 //
 
-bool FifoIsFull(struct s_fifo_ctl *psBufferStruct);
+int8u FifoIsFull(struct t_fifo_ctl *psBufferStruct);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -164,10 +164,8 @@ bool FifoIsFull(struct s_fifo_ctl *psBufferStruct);
 //
 //
 
-bool FifoIsEmpty(struct s_fifo_ctl *psBufferStruct);
+int8u FifoIsEmpty(struct t_fifo_ctl *psBufferStruct);
 
-
-///////////////////////////////////////////////////////////////////////////////////////////
 // Function   : FifoGetLastChar
 // Purpose  : Returns last byte added to the buffer (if available) buffer contents are unchanged
 // Parameters : struct t_fifo_ctl *psBufferStruct
@@ -178,7 +176,7 @@ bool FifoIsEmpty(struct s_fifo_ctl *psBufferStruct);
 //                !!Disables interrupts globally!!
 //
 
-bool FifoGetLastChar(struct s_fifo_ctl *psBufferStruct, uint8_t *data);
+bool FifoGetLastChar(struct t_fifo_ctl *psBufferStruct, uint8_t *data);
 
 
 #endif // _FIFOH_

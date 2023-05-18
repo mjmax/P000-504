@@ -8,9 +8,10 @@ NOTES:          Due to potential corruption, many of these functions will
                 disable interrupts globally.
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"       /* typedefs                                  */
 #include <avr/io.h>
 #include <avr/wdt.h>
-
+//#include "debug.h"
 #include "fifo.h"        /* FIFO buffer handler                       */
 
 
@@ -23,26 +24,35 @@ NOTES:          Due to potential corruption, many of these functions will
 // Notes:
 //
 
-bool FifoIsEmpty(struct s_fifo_ctl *psBufferStruct)
+int8u FifoIsEmpty(struct t_fifo_ctl *psBufferStruct)
 {
-  bool bIsEmpty;
-  uint8_t sReg;
+  int8u ucIsEmpty;
+  int8u sReg;
+
+//  #ifdef DEBUG_FIFO_FUNC_CALLS
+//  DebugPutStr_P(PSTR("FifoIsEmpty\n"));
+//  #endif
 
   /* disable interrupts globally */
   sReg = SREG;
   SREG = 0;
 
-  //ucIsEmpty = (psBufferStruct->ucFree > psBufferStruct->ucBufferSize);
-  if (psBufferStruct->ucFree > psBufferStruct->ucBufferSize)
+  if (psBufferStruct->ucFree < psBufferStruct->ucBufferSize)
   {
-    bIsEmpty = 0;
+    ucIsEmpty = 0;
   }
   else
   {
-    bIsEmpty = 1;
+    ucIsEmpty = 1;
   }
 
   /* reenable interrupts globally */
   SREG = sReg;
-  return bIsEmpty;
+
+  #ifdef DEBUG_FIFO_IS_EMPTY
+  DebugPutStr_P(PSTR("buffer "));
+  DebugPutStr_P((ucIsEmpty == 1) ? PSTR("empty\n") : PSTR("not empty\n"));
+  #endif
+
+  return ucIsEmpty;
 }

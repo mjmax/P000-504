@@ -8,9 +8,10 @@ NOTES:          Due to potential corruption, many of these functions will
                 disable interrupts globally.
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"       /* typedefs                                  */
 #include <avr/io.h>
 #include <avr/wdt.h>
-
+//#include "debug.h"
 #include "fifo.h"        /* FIFO buffer handler                       */
 
 
@@ -27,10 +28,24 @@ NOTES:          Due to potential corruption, many of these functions will
 //                !!Disables interrupts globally!!
 //
 
-uint8_t FifoGetString(struct s_fifo_ctl *psBufferStruct, uint8_t *pucData, uint8_t ucSize)
+int8u FifoGetString(struct t_fifo_ctl *psBufferStruct, int8u *pucData, int8u ucSize)
 {
-  uint8_t ucCount = 0;
-  uint8_t sReg;
+  int8u ucCount = 0;
+  int8u sReg;
+
+  #ifdef DEBUG_FIFO_FUNC_CALLS
+  DebugPutStr_P(PSTR("FifoGetString\n"));
+  #endif
+
+  #ifdef DEBUG_FIFO_GET_STRING
+  DebugPutStr_P(PSTR("GetStr entry @ "));
+  DebugPutChar(psBufferStruct->ucHeadIndex);
+  DebugPutStr_P(PSTR(" free="));
+  DebugPutChar(psBufferStruct->ucFree);
+  DebugPutStr_P(PSTR(" n="));
+  DebugPutChar(ucSize);
+  DebugPutChar('\n');
+  #endif
 
   /* disable interrupts globally */
   sReg = SREG;
@@ -41,12 +56,21 @@ uint8_t FifoGetString(struct s_fifo_ctl *psBufferStruct, uint8_t *pucData, uint8
     pucData[ucCount] = psBufferStruct->pucBuffer[psBufferStruct->ucHeadIndex];
     ucCount++;
     psBufferStruct->ucFree++;
-    psBufferStruct->ucHeadIndex = (uint8_t)((psBufferStruct->ucHeadIndex+1)%
+    psBufferStruct->ucHeadIndex = (int8u)((psBufferStruct->ucHeadIndex+1)%
                                            psBufferStruct->ucBufferSize);
     wdt_reset();
   }
 
   /* reenable interrupts globally */
   SREG = sReg;
+
+  #ifdef DEBUG_FIFO_GET_STRING
+  DebugPutStr_P(PSTR("GetStr exit @ "));
+  DebugPutChar(psBufferStruct->ucHeadIndex);
+  DebugPutStr_P(PSTR(" free="));
+  DebugPutChar(psBufferStruct->ucFree);
+  DebugPutChar('\n');
+  #endif
+
   return ucCount;
 }

@@ -2,15 +2,16 @@
 MODULE:    	FIFO BUFFER
 VERSION:   	1.01
 CONTAINS:  	FIFO buffer implementation
-COPYRIGHT:
+COPYRIGHT: 	
 DATE: 		9 Mar 2004
 NOTES:          Due to potential corruption, many of these functions will
                 disable interrupts globally.
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"       /* typedefs                                  */
 #include <avr/io.h>
 #include <avr/wdt.h>
-
+//#include "debug.h"
 #include "fifo.h"        /* FIFO buffer handler                       */
 
 
@@ -23,9 +24,13 @@ NOTES:          Due to potential corruption, many of these functions will
 //                !!Disables interrupts globally!!
 //
 
-void FifoFlushBuffer(struct s_fifo_ctl *psBufferStruct)
+void FifoFlushBuffer(struct t_fifo_ctl *psBufferStruct)
 {
-  uint8_t sReg;
+  int8u sReg;
+
+  #ifdef DEBUG_FIFO_FUNC_CALLS
+  DebugPutStr_P(PSTR("FifoFlushBuffer\n"));
+  #endif
 
   /* disable interrupts globally */
   sReg = SREG;

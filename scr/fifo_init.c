@@ -8,10 +8,12 @@ NOTES:          Due to potential corruption, many of these functions will
                 disable interrupts globally.
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"       /* typedefs                                  */
 #include <avr/io.h>
 #include <avr/wdt.h>
-
+//#include "debug.h"
 #include "fifo.h"        /* FIFO buffer handler                       */
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Function 	: FifoInit
@@ -24,9 +26,13 @@ NOTES:          Due to potential corruption, many of these functions will
 //                !!Disables interrupts globally!!
 //
 
-void FifoInit(struct s_fifo_ctl *psBufferStruct, uint8_t *pucBuffer, uint8_t ucBufferSize)
+void FifoInit(struct t_fifo_ctl *psBufferStruct, int8u *pucBuffer, int8u ucBufferSize)
 {
-  uint8_t sReg;
+  int8u sReg;
+
+  #ifdef DEBUG_FIFO_FUNC_CALLS
+  DebugPutStr_P(PSTR("FifoInit\n"));
+  #endif
 
   if (ucBufferSize > 254)
   {

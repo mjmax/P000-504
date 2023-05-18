@@ -8,9 +8,10 @@ NOTES:          Due to potential corruption, many of these functions will
                 disable interrupts globally.
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"       /* typedefs                                  */
 #include <avr/io.h>
 #include <avr/wdt.h>
-
+//#include "debug.h"
 #include "fifo.h"        /* FIFO buffer handler                       */
 
 
@@ -26,10 +27,13 @@ NOTES:          Due to potential corruption, many of these functions will
 //                !!Disables interrupts globally!!
 //
 
-bool FifoPutChar(struct s_fifo_ctl *psBufferStruct, uint8_t ucData)
+void FifoPutChar(struct t_fifo_ctl *psBufferStruct, int8u ucData)
 {
-  bool result = false;
-  uint8_t sReg;
+  int8u sReg;
+
+  #ifdef DEBUG_FIFO_FUNC_CALLS
+  DebugPutStr_P(PSTR("FifoPutChar\n"));
+  #endif
 
   /* disable interrupts globally */
   sReg = SREG;
@@ -39,12 +43,20 @@ bool FifoPutChar(struct s_fifo_ctl *psBufferStruct, uint8_t ucData)
   { /* space is available */
     psBufferStruct->pucBuffer[psBufferStruct->ucTailIndex] = ucData;
     psBufferStruct->ucFree--;
-    psBufferStruct->ucTailIndex = (uint8_t)((psBufferStruct->ucTailIndex+1)%
+    psBufferStruct->ucTailIndex = (int8u)((psBufferStruct->ucTailIndex+1)%
                                            psBufferStruct->ucBufferSize);
-    result = true;
   }
+
+  #ifdef DEBUG_FIFO_PUT_CHAR
+  DebugPutStr_P(PSTR("PutCh "));
+  DebugPutChar(psBufferStruct->pucBuffer[psBufferStruct->ucTailIndex]);
+  DebugPutStr_P(PSTR("@ "));
+  DebugPutChar(psBufferStruct->ucTailIndex);
+  DebugPutStr_P(PSTR(" free="));
+  DebugPutChar(psBufferStruct->ucFree);
+  DebugPutChar('\n');
+  #endif
 
   /* reenable interrupts globally */
   SREG = sReg;
-  return result;
 }
