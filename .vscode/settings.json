@@ -6,6 +6,7 @@
         "usart_int.h": "c",
         "serial.h": "c",
         "avrdet.h": "c",
-        "iocontrol.h": "c"
+        "iocontrol.h": "c",
+        "interrupt.h": "c"
     }
 }

@@ -27,6 +27,7 @@ NOTES:          Due to potential corruption, many of these functions will
 #define BAUD_TO_BAUDCTRL_CLK2X(baud, freq, bscale) ((freq / ((1 << bscale) * 8) / baud) - 1)
 
 #define BSCALE 0
+//#define F_CLOCK 16588800UL
 //#define BACALE_LOW_BAUD	2
 
 //#define BAUD_TO_BAUDCTRL_LOW_BAUD(baud) BAUD_TO_BAUDCTRL(baud, FREQ, BACALE_LOW_BAUD)
