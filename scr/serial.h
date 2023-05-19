@@ -3,11 +3,10 @@
 
 #include "types.h"
 
-enum e_databits { SEVENDATABITS = 7, EIGHTDATABITS = 8 };
-enum e_stopbits { ONESTOPBIT = 1, TWOSTOPBITS = 2 };
-enum e_parity   { NOPARITY = 0, ODDPARITY = 1, EVENPARITY = 2 };
-
-enum e_buffer_type { BUFFER_RX, BUFFER_TX };
+typedef enum {FIVE = 5, SIX ,SEVEN, EIGHT} usartDataBits_t;
+typedef enum {ONE = 1, TWO } usartStopBits_t;
+typedef enum {NONE, ODD, EVEN } usartParity_t;
+typedef enum {BUFFER_RX, BUFFER_TX } usartBuffType_t ;
 
 
 ///.............Imports from X300-509 X350 rear board code.........//
@@ -49,7 +48,7 @@ void TrySendCh(void);
  *
  */
 void SerialHandler(void);
-void SerialInit(int32u baud);
+void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits);
 void SerialPutChar(char ch);
 void SerialPut(unsigned char *ptr, unsigned char length);
 void SerialPutStr(char *str);

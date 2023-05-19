@@ -8,6 +8,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
+
 void bg_10(void)
 {
 
@@ -18,8 +19,7 @@ void bg_100(void)
     static bool flip = true;
 
     digitalWrite(D13, flip);
-    flip = !flip;
-    //PORTB ^= 1<<5; 
+    flip = !flip; 
 }
 
 void bg_1000(void)
@@ -62,7 +62,7 @@ void time_update(void)
 int main(void)
 {
     pinMode(D13, OUTPUT);
-    SerialInit(115200);
+    SerialInit(115200,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 
     sei(); // Enable global interrupts
@@ -72,6 +72,7 @@ int main(void)
         //_delay_ms(1000);
         //SerialHandler();
         //PORTB ^= 1<<5; 
+        
     }
     return 0;
 }

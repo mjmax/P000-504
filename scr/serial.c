@@ -27,7 +27,6 @@ NOTES:          Due to potential corruption, many of these functions will
 #define BAUD_TO_BAUDCTRL_CLK2X(baud, freq, bscale) ((freq / ((1 << bscale) * 8) / baud) - 1)
 
 #define BSCALE 0
-//#define F_CLOCK 16588800UL
 //#define BACALE_LOW_BAUD	2
 
 //#define BAUD_TO_BAUDCTRL_LOW_BAUD(baud) BAUD_TO_BAUDCTRL(baud, FREQ, BACALE_LOW_BAUD)
@@ -53,31 +52,34 @@ char message[BUFFER_SIZE];
 /*
  * SerialInit -
  *
- * Initializes UART for mode 1
- * Baudrate: 9600 @ 8MHz internal RC, CKDIV8=0
- *
+ * Initializes UART for given baudrate, parity, databits and stopbits
+ * @param Baudrate: 9600, 19200, 38400, 57600, 115200
+ * @param Parity: NONE, ODD, EVEN
+ * @param Databits: 5, 6, 7, 8
+ * @param Stopbits: 1, 2
+ * @return none
+ * @note
  * CAUTION: If interrupts are being used then EA must be set to 1
  *       after calling this function
  */
-void SerialInit(int32u baud)
+void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits)
 {
   	const uint8_t chsize[] = { (0<<UCSZ00), (1<<UCSZ00), (2<<UCSZ00), (3<<UCSZ00) };
   	uint8_t ctrlc;
   	uint16_t baudpscaler;
-	int16u uiBRR;
-	char parity = 'n';
-	int8u databits = 8;
-	int8u stopbits = 1;
 
+	/* Initialize the buffers */
   	FifoInit(&rSioRx1BufferCtl, aucSioRx1Buffer, SIO_RX1_BUF_SIZE);
   	FifoInit(&rSioTx1BufferCtl, aucSioTx1Buffer, SIO_TX1_BUF_SIZE);
 
-	cli(); // Disable global interrupts
-	UCSR0B = 0x00; 				  //disable while setting baud rate
+	/*Disable global interrupts*/
+	cli();
+
+	UCSR0B = 0x00; 	//disable while setting baud rate
 
 	/* Set Async, parity, data and stop bits */
 	ctrlc = UCSR0C;
-	ctrlc |= ('n' == parity) ? (0<<UPM00) : ('e' == parity) ? (2<<UPM00) : (3<<UPM00);
+	ctrlc |= (NONE == parity) ? (0<<UPM00) : (EVEN == parity) ? (2<<UPM00) : (3<<UPM00);
 	ctrlc |= (1 == stopbits) ? (0<<USBS0) : (1<<USBS0);
 	ctrlc |= chsize[databits - 5];
 	UCSR0C = ctrlc;
@@ -98,7 +100,6 @@ void SerialInit(int32u baud)
 	UBRR0L = (int8u) baudpscaler;
 
   	/* Enable receive and transmit */
-	//UCSR0B = (1<<RXEN0) | (1<<TXEN0);
   	UCSR0B = ((1 << RXCIE0) | (1 << RXEN0) | (1 << TXEN0));
 
 	sei(); // Enable global interrupts
@@ -182,6 +183,17 @@ char SerialGetChar(void)
 	return (char)data;
 }
 
+
+/*
+ * TrycSendCh -
+ *
+ * Try to send a character out the serial port
+ * @param None
+ * @return none
+ * @note
+ * IMPORTANT: Call this function in the main loop to send characters
+ *	   out the serial port. This function will enable the UDRE
+ */
 void TrySendCh(void)
 {
   if(FifoIsEmpty(&rSioTx1BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
@@ -312,7 +324,7 @@ void SerialHandler(void)
 
 /////////..............INTERRUPT...............///////
 
-
+/* USART0, Rx Complete Interrupt handler*/
 ISR(USART_RX_vect)
 {
   int8u ucStatus;
@@ -324,9 +336,11 @@ ISR(USART_RX_vect)
   err = ((1 << FE0) | (1 << UPE0) | (1 << DOR0));
 
   if ((ucStatus & err) == 0x00)
-  { /* only store if no errors (any of FE, DOR, PE will fail write) */
+  { 
+	/* only store if no errors (any of FE, DOR, PE will fail write) */
     FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
-    if(is_last_char(ucCh))
+    /* Count the number of messages received */
+	if(is_last_char(ucCh))
     	sci_set_new_message(sci_get_new_message() + 1);
   }
 }
