@@ -269,55 +269,6 @@ unsigned long SerialGetLong(void)
 #endif
 }
 
-//void DefaultMsgProcess(void)
-//{
-//	char commandToExecute[MAX_MODULE_COMM_BUFFER];
-//	char tempMessage[5][BUFFER_SIZE]; // 5 is maximum numbers of messages contain in one buffer lenth
-//	int8u count = 0;
-//	int8u msgCount = 0;
-//	int8u poniCount = 0;
-//	int8u strlength;
-//	bool allMessageProcessed = true;
-//
-//	memset(tempMessage,'\0',sizeof(tempMessage));
-//
-//	strlength = strlen(message);
-//
-//	for(count = 0; count <= strlength; count++) // search for DLEs
-//	{
-//		tempMessage[msgCount][poniCount++] = message[count];
-//		if(message[count+1] == (char)H_DLE)
-//		{
-//			msgCount += 1; // more than one message
-//			poniCount = 0;
-//		}
-//	}
-//
-//	while (allMessageProcessed)
-//	{
-//		switch (tempMessage[msgCount][1])	// multiplex the message according to the port
-//		{
-//			case (char)PORT_CMD:
-//				memset(commandToExecute,'\0',arlen(commandToExecute));
-//				strncpy(commandToExecute,&tempMessage[msgCount][2],strlen(&tempMessage[msgCount][2]));
-//				//CommandHandle(commandToExecute);
-//				//CommsSendString(commandToExecute,SCI_PORT_RS232); // test
-//				break;
-//			case (char)PORT_BT:
-//				//CommsSendString(&tempMessage[msgCount][2],SCI_PORT_BT);
-//				break;
-//			case (char)PORT_EXT:
-//				//CommsSendString(&tempMessage[msgCount][2],SCI_PORT_RS232); // remove first two characters
-//				break;
-//		}
-//		if(msgCount <= 0)
-//			allMessageProcessed = false;
-//
-//		msgCount -= 1;
-//	}
-//}
-
-
 void SerialHandler(void)
 {
 	
