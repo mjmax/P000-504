@@ -1,6 +1,8 @@
 #include "avrdet.h"
 #include "serial.h"
 #include "timer0.h"
+#include "types.h"
+#include "iocontrol.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -13,7 +15,11 @@ void bg_10(void)
 
 void bg_100(void)
 {
-    PORTB ^= 1<<5; 
+    static bool flip = true;
+
+    digitalWrite(D13, flip);
+    flip = !flip;
+    //PORTB ^= 1<<5; 
 }
 
 void bg_1000(void)
@@ -55,12 +61,12 @@ void time_update(void)
 
 int main(void)
 {
+    pinMode(D13, OUTPUT);
     SerialInit(115200);
     Timer0Init(time_update);
 
     sei(); // Enable global interrupts
 
-    DDRB |= 1<<5;
     while(1)
     {
         //_delay_ms(1000);
