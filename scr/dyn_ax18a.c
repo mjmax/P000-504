@@ -65,6 +65,12 @@ void DynAx18aCheckTxComplete(void)
         digitalWrite(DYN_AX18A_DIR_PIN, LOW);
 }
 
+void dyn_ax_18a_end_tx(void)
+{
+    set_tx_status(TRUE);
+    digitalWrite(DYN_AX18A_DIR_PIN, LOW);
+}
+
 
 void dyn_ax_18a_start_tx(void)
 {

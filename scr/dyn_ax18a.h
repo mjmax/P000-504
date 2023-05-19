@@ -15,6 +15,7 @@ void DynAx18aInit(void);
 void dyn_test_int(void);
 void dyn_test_servo(void);
 void dyn_ax_18a_start_tx(void);
+void dyn_ax_18a_end_tx(void);
 void DynAx18aCheckTxComplete(void);
 
 #endif

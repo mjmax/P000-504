@@ -332,7 +332,7 @@ void SerialHandler(void)
 
 		//flushBuffer(BUFFER_RX);
 	}
-	DynAx18aCheckTxComplete();
+	//DynAx18aCheckTxComplete();
 	TrySendCh();				// do not move this line (keep at last)
 }
 
@@ -382,6 +382,7 @@ ISR(USART_UDRE_vect)
 ISR(USART_TX_vect)
 	{ /* whatever was being transmitted has completed */
 	set_tx_status(TRUE);
+	dyn_ax_18a_end_tx();
 	/* disable this interrupt */
 	UCSR0B &= ~(1 << TXCIE0);
 }
