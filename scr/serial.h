@@ -58,5 +58,8 @@ void SerialGetMsg(char *ptr);
 void SerialGet(char *ptr, int8u length);
 unsigned long SerialGetLong(void);
 
+void set_tx_status(int8u status);
+bool get_tx_status(void);
+
 #endif
 

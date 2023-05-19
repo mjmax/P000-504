@@ -21,6 +21,9 @@ NOTES:          Due to potential corruption, many of these functions will
 #include "asciidef.h"
 #include "iocontrol.h"
 #include "command.h"
+#include "serial.h"
+#include "dyn_ax18a.h"
+#include "debug.h"
 
 
 #define BAUD_TO_BAUDCTRL(baud, freq, bscale) ((freq / ((1 << bscale) * 16) / baud) - 1)
@@ -42,7 +45,7 @@ struct t_fifo_ctl rSioRx1BufferCtl;
 static int8u aucSioTx1Buffer[BUFFER_SIZE];
 struct t_fifo_ctl rSioTx1BufferCtl;
 
-//static bool  bTxIdle = 0;
+static bool  bTxIdle = 0;
 
 int8u finalMsgCount = 0;
 char message[BUFFER_SIZE];
@@ -127,6 +130,16 @@ void sci_set_new_message(int8u count)
 int8u sci_get_new_message(void)
 {
 	return	finalMsgCount;
+}
+
+void set_tx_status(int8u status)
+{
+	bTxIdle = status;
+}
+
+bool get_tx_status(void)
+{
+	return bTxIdle;
 }
 
 
@@ -307,8 +320,9 @@ unsigned long SerialGetLong(void)
 
 void SerialHandler(void)
 {
+	
 	memset(message, '\0', arlen(message));
-	CommsSendString("SerialHandler\r\n");
+	//CommsSendString("SerialHandler\r\n");
 	if(sci_get_new_message() > 0)
 	{
 		//SerialGetMsg(message);
@@ -318,6 +332,7 @@ void SerialHandler(void)
 
 		//flushBuffer(BUFFER_RX);
 	}
+	DynAx18aCheckTxComplete();
 	TrySendCh();				// do not move this line (keep at last)
 }
 
@@ -327,45 +342,48 @@ void SerialHandler(void)
 /* USART0, Rx Complete Interrupt handler*/
 ISR(USART_RX_vect)
 {
-  int8u ucStatus;
-  int8u ucCh;
-  int8u err;
+	int8u ucStatus;
+	int8u ucCh;
+	int8u err;
 
-  ucStatus = UCSR0A;
-  ucCh = UDR0;
-  err = ((1 << FE0) | (1 << UPE0) | (1 << DOR0));
+	ucStatus = UCSR0A;
+	ucCh = UDR0;
+	err = ((1 << FE0) | (1 << UPE0) | (1 << DOR0));
 
-  if ((ucStatus & err) == 0x00)
-  { 
-	/* only store if no errors (any of FE, DOR, PE will fail write) */
-    FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
-    /* Count the number of messages received */
-	if(is_last_char(ucCh))
-    	sci_set_new_message(sci_get_new_message() + 1);
-  }
+	if ((ucStatus & err) == 0x00)
+	{ 
+		/* only store if no errors (any of FE, DOR, PE will fail write) */
+		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+		/* Count the number of messages received */
+		if(is_last_char(ucCh))
+			sci_set_new_message(sci_get_new_message() + 1);
+	}
 }
 
+/* USART0, Data Register Empty Interrupt handler*/
 ISR(USART_UDRE_vect)
 {
-  if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
-  { /* data still in current stream */
-     UDR0 = FifoGetChar(&rSioTx1BufferCtl);
-     UCSR0A |= (1 << TXC0);
-  }
-  else
-  { /* DTR is holding things up on this channel */
-      /* disable this (the UDR) interrupt */
-     UCSR0B &= ~(1 << UDRIE0);
-     /* enable the TXC flag */
-     UCSR0B |= (1 << TXCIE0);
-  }
+	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	{ /* data still in current stream */
+		dyn_ax_18a_start_tx();
+		UDR0 = FifoGetChar(&rSioTx1BufferCtl);
+		UCSR0A |= (1 << TXC0);
+	}
+	else
+	{ /* DTR is holding things up on this channel */
+		/* disable this (the UDR) interrupt */
+		UCSR0B &= ~(1 << UDRIE0);
+		/* enable the TXC flag */
+		UCSR0B |= (1 << TXCIE0);
+	}
 }
 
+/* USART0, Tx Complete Interrupt handler*/
 ISR(USART_TX_vect)
-{ /* whatever was being transmitted has completed */
-  //bTxIdle = 1;
-  /* disable this interrupt */
-  UCSR0B &= ~(1 << TXCIE0);
+	{ /* whatever was being transmitted has completed */
+	set_tx_status(TRUE);
+	/* disable this interrupt */
+	UCSR0B &= ~(1 << TXCIE0);
 }
 
 

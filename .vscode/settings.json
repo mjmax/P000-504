@@ -7,6 +7,8 @@
         "serial.h": "c",
         "avrdet.h": "c",
         "iocontrol.h": "c",
-        "interrupt.h": "c"
+        "interrupt.h": "c",
+        "dyn_ax18a.h": "c",
+        "types.h": "c"
     }
 }

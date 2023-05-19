@@ -3,6 +3,8 @@
 #include "timer0.h"
 #include "types.h"
 #include "iocontrol.h"
+#include "dyn_ax18a.h"
+#include "debug.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -16,15 +18,18 @@ void bg_10(void)
 
 void bg_100(void)
 {
-    static bool flip = true;
+    debug_blink();
+    //static bool flip = true;
 
-    digitalWrite(D13, flip);
-    flip = !flip; 
+    //digitalWrite(D13, flip);
+    //flip = !flip; 
 }
 
 void bg_1000(void)
 {
-    SerialHandler();
+    //CommsSendString("SerialHandler\r\n");
+    dyn_test_servo();
+    //SerialHandler();
 }
 
 void bg_tick(void)
@@ -61,7 +66,9 @@ void time_update(void)
 
 int main(void)
 {
-    pinMode(D13, OUTPUT);
+    //pinMode(D13, OUTPUT);
+    degug_init();
+    DynAx18aInit();
     SerialInit(115200,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 
@@ -70,9 +77,8 @@ int main(void)
     while(1)
     {
         //_delay_ms(1000);
-        //SerialHandler();
-        //PORTB ^= 1<<5; 
-        
+        SerialHandler();
+
     }
     return 0;
 }
