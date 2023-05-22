@@ -9,6 +9,8 @@
         "iocontrol.h": "c",
         "interrupt.h": "c",
         "dyn_ax18a.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "stdio.h": "c",
+        "stddef.h": "c"
     }
 }

@@ -25,5 +25,8 @@ Copyright:
 #define S_DC2 ('\x12')
 #define S_DC4 ('\x14')
 
+#define REG_ACCESSIBILITY_R_STRING          'R'
+#define REG_ACCESSIBILITY_W_STRING          'W'   
+
 #endif
 
