@@ -232,6 +232,18 @@ void SerialGet(char *ptr, int8u length)
 	}
 }
 
+void ReadSerial(void)
+{
+	int8u ch;
+	int8u state;
+	if (FifoIsEmpty(&rSioRx1BufferCtl) == 0)
+	{
+		ch = FifoGetChar(&rSioRx1BufferCtl);
+		//state machine implmentation to detect dynamixel packet
+		runDynStateMachine(&ch);
+	}
+}
+
 void SerialGetMsg(char *ptr)
 {
 	char ch;
@@ -273,6 +285,7 @@ void SerialHandler(void)
 {
 	
 	memset(message, '\0', arlen(message));
+	ReadSerial();
 	//CommsSendString("SerialHandler\r\n");
 	if(sci_get_new_message() > 0)
 	{
