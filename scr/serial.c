@@ -235,13 +235,21 @@ void SerialGet(char *ptr, int8u length)
 void ReadSerial(void)
 {
 	int8u ch;
-	int8u state;
+	int8u temp;
+	char str[20];
+	bool bDynPacket = false;
+
 	if (FifoIsEmpty(&rSioRx1BufferCtl) == 0)
 	{
 		ch = FifoGetChar(&rSioRx1BufferCtl);
+		runDynStateMachine(ch);
+		//CommsSendString("test\r\n");
+		//dyneReadSerial(ch);
 		//state machine implmentation to detect dynamixel packet
-		runDynStateMachine(&ch);
+		//if(!runDynStateMachine(ch))
+		//	break;
 	}
+
 }
 
 void SerialGetMsg(char *ptr)
@@ -319,8 +327,9 @@ ISR(USART_RX_vect)
 		/* only store if no errors (any of FE, DOR, PE will fail write) */
 		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
 		/* Count the number of messages received */
-		if(is_last_char(ucCh))
-			sci_set_new_message(sci_get_new_message() + 1);
+		//SerialPutChar(ucCh);
+		//if(is_last_char(ucCh))
+		//	sci_set_new_message(sci_get_new_message() + 1);
 	}
 }
 

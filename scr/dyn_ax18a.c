@@ -9,22 +9,29 @@
 #include "dyn_ax18a.h"
 #include "serial.h"
 #include "iocontrol.h"
+#include "types.h"
+#include "debug.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <util/delay.h>
 
 #define DYN_AX18A_DIR_PIN       D4
 
-#define HEADER      0xFF 
 #define SERVO_ADD   0x01
-#define CMD_WRITE   0x03
-#define GOAL_POS    0x1E
 #define PACKET_LEN  0x05
 
 char teststring1[20];
 char teststring2[20];
 
 struct dyn_packet_t dyn_rxpacket;
+int8u dynRxData[50];
 struct dyn_packet_t dyn_txpacket;
+int8u dynTxData[50];
 
 int8u dynRxState = IDLE;
+bool dynPacketAvailable = false;
+
 
 const int8u dynePacketInst[] = {DYN_PACKET_INST_PING, DYN_PACKET_INST_READ, DYN_PACKET_INST_WRITE, DYN_PACKET_INST_REG_WRITE, DYN_PACKET_INST_ACTION, 
                                 DYN_PACKET_INST_FACTORY_RESET, DYN_PACKET_INST_REBOOT, DYN_PACKET_INST_SYNC_WRITE, DYN_PACKET_INST_SYNC_REG_WRITE, DYN_PACKET_INST_BULK_READ};
@@ -81,12 +88,135 @@ static const dynReg_t regTable[] =
 void DynAx18aInit(void)
 {
     dyn_test_int();
+    dyn_packet_init(&dyn_rxpacket, dynRxData);
+    dyn_packet_init(&dyn_txpacket, dynTxData);
     pinMode(DYN_AX18A_DIR_PIN, OUTPUT);
 }
 
-void runDynStateMachine(int8u *ch)
+bool runDynStateMachine(int8u ch)
 {
+    static int8u loadCount = 0;
+    bool status = true;
     int8u state = get_dyn_rx_state();
+
+    switch(state)
+    {
+        case IDLE:
+            if(ch == DYN_PACKET_HEADER1)
+            {
+                dyn_rxpacket.header1 = ch;
+                set_dyn_rx_state(HEADER1);
+            }
+            else
+            {
+                status = false;
+                set_dyn_rx_state(IDLE);
+            }
+            break;
+        case HEADER1:
+            if(ch == DYN_PACKET_HEADER2)
+            {
+                dyn_rxpacket.header2 = ch;
+                set_dyn_rx_state(HEADER2);
+            }
+            else
+            {
+                status = false;
+                set_dyn_rx_state(IDLE);
+            }
+            break;
+        case HEADER2:
+            dyn_rxpacket.pid = ch;
+            set_dyn_rx_state(PID);
+            break;
+        case PID:
+            dyn_rxpacket.plen = ch;
+            set_dyn_rx_state(PLEN);
+            break;
+        case PLEN:
+            set_dyn_rx_state(INSTRUCTION);
+            dyn_rxpacket.cmd = ch;
+            break;
+        case INSTRUCTION:
+            dyn_rxpacket.param[loadCount++] = ch;
+            set_dyn_rx_state(PLOADDATA);
+            break;
+        case PLOADDATA:
+            dyn_rxpacket.param[loadCount++] = ch;
+            if(loadCount >= (dyn_rxpacket.plen - (int8u)2))
+            {
+                //debug_blink();
+                loadCount = 0;
+                set_dyn_rx_state(CHECKSUM);
+            }
+            break;
+        case CHECKSUM:
+            dyn_rxpacket.checksum = ch;
+            //SerialPutChar(dyn_rxpacket.checksum);
+            if(dyn_rxpacket.checksum == dyn_checksum_validate(&dyn_rxpacket))
+            {
+                dynPacketAvailable = true;
+                
+                //debug_blink();
+            }
+
+            set_dyn_rx_state(IDLE);
+            break;
+        default:
+            set_dyn_rx_state(IDLE);
+            break;
+    }
+
+    //SerialPutChar(ch);
+    return status;
+}
+
+void dyneReadSerial(int8u ch)
+{
+    static bool h1Ok = false;
+    static bool h2Ok = false;
+    static int8u dCount = 0;
+
+    if(ch == 0xFF)
+    {
+        h1Ok = true;
+        h2Ok = false;
+    }
+
+    if(h1Ok && ch == 0xFF)
+    {
+        h2Ok = true;
+    }
+
+    if(h1Ok && h2Ok)
+    {
+        dynRxData[dCount++] = ch;
+    }
+
+    if((dCount >= 1) && (dCount >= dynRxData[1] + 1))
+    {
+        dCount = 0;
+        h1Ok = false;
+        h2Ok = false;
+        //runDynStateMachine(ch);
+        //CommsSendString("test\r\n");
+    }
+    SerialPutChar(ch);
+}
+
+bool dyn_checksum_validate(struct dyn_packet_t *packet)
+{
+    int8u checksum = 0,count = 0;
+
+    checksum += packet->pid;
+    checksum += packet->plen;
+    checksum += packet->cmd;
+    for(count = 0; count < packet->plen + 1; count++)
+        checksum += packet->param[count];
+    checksum = ~checksum;
+
+    SerialPutChar(checksum);
+    return (checksum == packet->checksum)? TRUE: FALSE;
 }
 
 int8u get_dyn_rx_state(void)
@@ -97,6 +227,17 @@ int8u get_dyn_rx_state(void)
 void set_dyn_rx_state(int8u state)
 {
     dynRxState = state;
+}
+
+void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata)
+{
+    packet->header1 = DYN_PACKET_HEADER1;
+    packet->header2 = DYN_PACKET_HEADER2;
+    packet->pid = SERVO_ADD;
+    packet->plen = 0;
+    packet->cmd = 0;
+    packet->param = pdata;
+    packet->checksum = 0;
 }
 
 void dyn_rx_packet_load(struct dyn_packet_t *packet)
@@ -123,23 +264,23 @@ void dyn_tx_packet_load(struct dyn_packet_t *packet)
 
 void dyn_test_int(void)
 {
-    teststring1[0] = (char) HEADER;
-    teststring1[1] = (char) HEADER;
+    teststring1[0] = (char) DYN_PACKET_HEADER1;
+    teststring1[1] = (char) DYN_PACKET_HEADER2;
     teststring1[2] = (char) SERVO_ADD;
     teststring1[3] = (char) PACKET_LEN;
-    teststring1[4] = (char) CMD_WRITE;
-    teststring1[5] = (char) GOAL_POS;
+    teststring1[4] = (char) DYN_PACKET_INST_WRITE;
+    teststring1[5] = (char) DYN_REG_GOAL_POSITION;
     teststring1[6] = (char) 0xF4;
     teststring1[7] = (char) 0x01;
     teststring1[8] = (char) 0xE3;
     teststring1[9] = '\0';
 
-    teststring2[0] = (char) HEADER;
-    teststring2[1] = (char) HEADER;
+    teststring2[0] = (char) DYN_PACKET_HEADER1;
+    teststring2[1] = (char) DYN_PACKET_HEADER2;
     teststring2[2] = (char) SERVO_ADD;
     teststring2[3] = (char) PACKET_LEN;
-    teststring2[4] = (char) CMD_WRITE;
-    teststring2[5] = (char) GOAL_POS;
+    teststring2[4] = (char) DYN_PACKET_INST_WRITE;
+    teststring2[5] = (char) DYN_REG_GOAL_POSITION;
     teststring2[6] = (char) 0xFF;
     teststring2[7] = (char) 0x03;
     teststring2[8] = (char) 0xD6;

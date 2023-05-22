@@ -18,7 +18,7 @@ void bg_10(void)
 
 void bg_100(void)
 {
-    debug_blink();
+    //debug_blink();
     //static bool flip = true;
 
     //digitalWrite(D13, flip);
@@ -28,7 +28,7 @@ void bg_100(void)
 void bg_1000(void)
 {
     //CommsSendString("SerialHandler\r\n");
-    dyn_test_servo();
+    //dyn_test_servo();
     //SerialHandler();
 }
 
@@ -69,8 +69,9 @@ int main(void)
     //pinMode(D13, OUTPUT);
     degug_init();
     DynAx18aInit();
+    SerialInit(9600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
-    SerialInit(1000000,NONE,EIGHT,ONE);
+    //SerialInit(1000000,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 
     sei(); // Enable global interrupts
