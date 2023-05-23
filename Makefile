@@ -28,8 +28,8 @@ HFLAGS = -j .text -j .data -O ihex
 # Options for avrdude to burn the hex file
 DUDEFLAGS = -c arduino
 DUDEFLAGS += -p m328p
-DUDEFLAGS += -P COM6
-DUDEFLAGS += -b 57600
+DUDEFLAGS += -P COM5
+DUDEFLAGS += -b 115200
 DUDEFLAGS += -U flash:w:$(MAIN_HEX_PATH):i
 
 # Directory for source and header files
