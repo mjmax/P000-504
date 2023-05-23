@@ -34,7 +34,7 @@ NOTES:          Due to potential corruption, many of these functions will
 
 //#define BAUD_TO_BAUDCTRL_LOW_BAUD(baud) BAUD_TO_BAUDCTRL(baud, FREQ, BACALE_LOW_BAUD)
 #define BAUD_TO_BAUDCTRL_FIXED(baud) BAUD_TO_BAUDCTRL(baud, F_CPU, BSCALE)
-#define BAUD_TO_BAUDCTRL_FIXED_CLK2X(baud) BAUD_TO_BAUDCTRL_CLK2X(baud, FREQ, BSCALE)
+#define BAUD_TO_BAUDCTRL_FIXED_CLK2X(baud) BAUD_TO_BAUDCTRL_CLK2X(baud, F_CPU, BSCALE)
 
 
 /* the A receiver buffer (RX1) */
@@ -98,7 +98,14 @@ void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits)
 	//	usart->hardware->BAUDCTRLA = BAUD_TO_BAUDCTRL_LOW_BAUD(baud);
 	//	usart->hardware->BAUDCTRLB = (BACALE_LOW_BAUD << USART_BSCALE_gp) | 0;
 	//}
-  	baudpscaler = BAUD_TO_BAUDCTRL_FIXED(baud);
+	if(baud < 1000001)
+  		baudpscaler = BAUD_TO_BAUDCTRL_FIXED(baud);
+	else
+	{
+		baudpscaler = BAUD_TO_BAUDCTRL_FIXED_CLK2X(baud);
+		UCSR0A |= (1 << U2X0);
+	}
+
   	UBRR0H = (int8u) (baudpscaler >> 8) & 0x0F;
 	UBRR0L = (int8u) baudpscaler;
 

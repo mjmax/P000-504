@@ -11,6 +11,7 @@
         "dyn_ax18a.h": "c",
         "types.h": "c",
         "stdio.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "debug.h": "c"
     }
 }

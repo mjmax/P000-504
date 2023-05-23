@@ -75,6 +75,7 @@ int main(void)
     SerialInit(57600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
+    //SerialInit(2000000,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 
     sei(); // Enable global interrupts
