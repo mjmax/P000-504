@@ -30,7 +30,7 @@ struct dyn_packet_t dyn_txpacket;
 int8u dynTxData[50];
 
 int8u dynRxState = IDLE;
-bool dynPacketAvailable = false;
+bool dynMsgReceived = false;
 
 
 const int8u dynePacketInst[] = {DYN_PACKET_INST_PING, DYN_PACKET_INST_READ, DYN_PACKET_INST_WRITE, DYN_PACKET_INST_REG_WRITE, DYN_PACKET_INST_ACTION, 
@@ -90,7 +90,56 @@ void DynAx18aInit(void)
     dyn_test_int();
     dyn_packet_init(&dyn_rxpacket, dynRxData);
     dyn_packet_init(&dyn_txpacket, dynTxData);
+    set_dyn_msg_received(false);
     pinMode(DYN_AX18A_DIR_PIN, OUTPUT);
+}
+
+void dynRxPacketProcess(void)
+{
+    debug_blink();
+    // int8u i;
+    // int8u id;
+    // int8u length;
+    // int8u error;
+    // int8u checksum;
+    // int8u rx_checksum;
+
+    // if(get_dyn_msg_received())
+    // {
+    //     set_dyn_msg_received(false);
+    //     id = dyn_rxpacket.id;
+    //     length = dyn_rxpacket.length;
+    //     error = dyn_rxpacket.error;
+    //     checksum = dyn_rxpacket.checksum;
+    //     rx_checksum = dynRxData[length + 4];
+
+    //     if(id == DYN_BROADCAST_ID)
+    //     {
+    //         // do nothing
+    //     }
+    //     else
+    //     {
+    //         if(rx_checksum == checksum)
+    //         {
+    //             if(error != 0)
+    //             {
+    //                 // error
+    //             }
+    //             else
+    //             {
+    //                 // process data
+    //                 for(i = 0; i < length; i++)
+    //                 {
+    //                     dyn_rxpacket.data[i] = dynRxData[i + 5];
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+    //             // checksum error
+    //         }
+    //     }
+    // }
 }
 
 bool runDynStateMachine(int8u ch)
@@ -145,19 +194,15 @@ bool runDynStateMachine(int8u ch)
             dyn_rxpacket.param[loadCount++] = ch;
             if(loadCount >= (dyn_rxpacket.plen - (int8u)2))
             {
-                //debug_blink();
                 loadCount = 0;
                 set_dyn_rx_state(CHECKSUM);
             }
             break;
         case CHECKSUM:
             dyn_rxpacket.checksum = ch;
-            //SerialPutChar(dyn_rxpacket.checksum);
-            if(dyn_rxpacket.checksum == dyn_checksum_validate(&dyn_rxpacket))
+            if(dyn_checksum_validate(&dyn_rxpacket))
             {
-                dynPacketAvailable = true;
-                
-                //debug_blink();
+                set_dyn_msg_received(true);
             }
 
             set_dyn_rx_state(IDLE);
@@ -167,10 +212,11 @@ bool runDynStateMachine(int8u ch)
             break;
     }
 
-    //SerialPutChar(ch);
     return status;
 }
 
+
+/*Test Function with simple processing for receive handle*/
 void dyneReadSerial(int8u ch)
 {
     static bool h1Ok = false;
@@ -201,7 +247,7 @@ void dyneReadSerial(int8u ch)
         //runDynStateMachine(ch);
         //CommsSendString("test\r\n");
     }
-    SerialPutChar(ch);
+    //SerialPutChar(ch);
 }
 
 bool dyn_checksum_validate(struct dyn_packet_t *packet)
@@ -215,8 +261,18 @@ bool dyn_checksum_validate(struct dyn_packet_t *packet)
         checksum += packet->param[count];
     checksum = ~checksum;
 
-    SerialPutChar(checksum);
-    return (checksum == packet->checksum)? TRUE: FALSE;
+    //SerialPutChar(checksum);
+    return (checksum == packet->checksum)? true: false;
+}
+
+void set_dyn_msg_received(bool status)
+{
+    dynMsgReceived = status;
+}
+
+bool is_dyn_msg_received(void)
+{
+    return dynMsgReceived;
 }
 
 int8u get_dyn_rx_state(void)

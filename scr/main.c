@@ -69,8 +69,8 @@ int main(void)
     //pinMode(D13, OUTPUT);
     degug_init();
     DynAx18aInit();
-    SerialInit(9600,NONE,EIGHT,ONE);
-    //SerialInit(115200,NONE,EIGHT,ONE);
+    //SerialInit(9600,NONE,EIGHT,ONE);
+    SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 

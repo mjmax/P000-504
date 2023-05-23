@@ -115,11 +115,14 @@ struct dyn_packet_t
 
 void DynAx18aInit(void);
 
+void dynRxPacketProcess(void);
 bool runDynStateMachine(int8u ch);
 void dyneReadSerial(int8u ch);
 bool dyn_checksum_validate(struct dyn_packet_t *packet);
 int8u get_dyn_rx_state(void);
 void set_dyn_rx_state(int8u state);
+void set_dyn_msg_received(bool status);
+bool is_dyn_msg_received(void);
 void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata);
 void dyn_rx_packet_load(struct dyn_packet_t *packet);
 void dyn_rx_packet_load(struct dyn_packet_t *packet);

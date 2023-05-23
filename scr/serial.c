@@ -239,17 +239,13 @@ void ReadSerial(void)
 	char str[20];
 	bool bDynPacket = false;
 
-	if (FifoIsEmpty(&rSioRx1BufferCtl) == 0)
+	if(FifoIsEmpty(&rSioRx1BufferCtl) == 0)
 	{
 		ch = FifoGetChar(&rSioRx1BufferCtl);
-		runDynStateMachine(ch);
-		//CommsSendString("test\r\n");
-		//dyneReadSerial(ch);
 		//state machine implmentation to detect dynamixel packet
-		//if(!runDynStateMachine(ch))
-		//	break;
+		runDynStateMachine(ch);
+		//dyneReadSerial(ch);
 	}
-
 }
 
 void SerialGetMsg(char *ptr)
@@ -294,17 +290,12 @@ void SerialHandler(void)
 	
 	memset(message, '\0', arlen(message));
 	ReadSerial();
-	//CommsSendString("SerialHandler\r\n");
-	if(sci_get_new_message() > 0)
+	if(is_dyn_msg_received())
 	{
-		//SerialGetMsg(message);
-		//SerialPutStr(message);
-		//DefaultMsgProcess();
-		//CommandHandle(&message[2]);
-
-		//flushBuffer(BUFFER_RX);
+		dynRxPacketProcess();
+		CommsSendString("TesPass\r\n");
+		set_dyn_msg_received(false);
 	}
-	//DynAx18aCheckTxComplete();
 	TrySendCh();				// do not move this line (keep at last)
 }
 
