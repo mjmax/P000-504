@@ -129,6 +129,7 @@ void dyn_rx_packet_load(struct dyn_packet_t *packet);
 void dyn_test_int(void);
 void dyn_test_servo(void);
 void dyne_test_echo_rx_packet(struct dyn_packet_t *packet);
+void dyn_test_received_position(void);
 void dyn_ax_18a_start_tx(void);
 void dyn_ax_18a_end_tx(void);
 void DynAx18aCheckTxComplete(void);

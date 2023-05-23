@@ -28,8 +28,10 @@ void bg_100(void)
 void bg_1000(void)
 {
     //CommsSendString("SerialHandler\r\n");
-    //dyn_test_servo();
     //SerialHandler();
+    //dyn_test_servo();
+    dyn_test_received_position();
+
 }
 
 void bg_tick(void)
@@ -70,7 +72,8 @@ int main(void)
     degug_init();
     DynAx18aInit();
     //SerialInit(9600,NONE,EIGHT,ONE);
-    SerialInit(115200,NONE,EIGHT,ONE);
+    SerialInit(57600,NONE,EIGHT,ONE);
+    //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     Timer0Init(time_update);
 

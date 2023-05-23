@@ -23,6 +23,7 @@
 
 char teststring1[20];
 char teststring2[20];
+char teststring3[20];
 
 struct dyn_packet_t dyn_rxpacket;
 int8u dynRxData[50];
@@ -97,7 +98,7 @@ void DynAx18aInit(void)
 void dynRxPacketProcess(void)
 {
     debug_blink();
-    //dyne_test_echo_rx_packet(&dyn_rxpacket);
+    //debug_blink();dyne_test_echo_rx_packet(&dyn_rxpacket);
     set_dyn_msg_received(false);
     // int8u i;
     // int8u id;
@@ -230,6 +231,7 @@ bool runDynStateMachine(int8u ch)
 
     if(cksmEnable)
     {
+        //debug_blink();
         dyn_rxpacket.checksum = ch;
         if(dyn_checksum_validate(&dyn_rxpacket))
             set_dyn_msg_received(true);
@@ -283,7 +285,7 @@ bool dyn_checksum_validate(struct dyn_packet_t *packet)
     checksum += packet->pid;
     checksum += packet->plen;
     checksum += packet->cmd;
-    for(count = 0; count < packet->plen + 1; count++)
+    for(count = 0; count < (packet->plen - (int8u)2); count++)
         checksum += packet->param[count];
     checksum = ~checksum;
 
@@ -366,7 +368,17 @@ void dyn_test_int(void)
     teststring2[6] = (char) 0xFF;
     teststring2[7] = (char) 0x03;
     teststring2[8] = (char) 0xD6;
-    teststring2[9] = '\0';    
+    teststring2[9] = '\0'; 
+
+    teststring3[0] = (char) DYN_PACKET_HEADER1;
+    teststring3[1] = (char) DYN_PACKET_HEADER2;
+    teststring3[2] = (char) SERVO_ADD;
+    teststring3[3] = (char) 0x04;
+    teststring3[4] = (char) DYN_PACKET_INST_READ;
+    teststring3[5] = (char) DYN_REG_PRESENT_POSITION;
+    teststring3[6] = (char) 0x02;
+    teststring3[7] = (char) 0xD2;
+    teststring3[8] = '\0';   
 }
 
 void dyn_test_servo(void)
@@ -374,6 +386,11 @@ void dyn_test_servo(void)
     static bool flip = true;
     (flip)? CommsSendString(teststring1) : CommsSendString(teststring2);
     flip = !flip;
+}
+
+void dyn_test_received_position(void)
+{
+    CommsSendString(teststring3);
 }
 
 void DynAx18aCheckTxComplete(void)
