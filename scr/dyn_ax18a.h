@@ -99,7 +99,7 @@ typedef struct{
 /*I initial value of the register is not defined*/
 #define DEF_NONE                       0xFF
 
-typedef enum {IDLE = 0, HEADER1, HEADER2, PID, PLEN, INSTRUCTION, PLOADDATA, CHECKSUM}dyn_rx_state_t;
+typedef enum {IDLE = 0, HEADER1, HEADER2, PID, PLEN, ERROR, PLOADDATA}dyn_rx_state_t;
 
 struct dyn_packet_t
 {
@@ -128,6 +128,7 @@ void dyn_rx_packet_load(struct dyn_packet_t *packet);
 void dyn_rx_packet_load(struct dyn_packet_t *packet);
 void dyn_test_int(void);
 void dyn_test_servo(void);
+void dyne_test_echo_rx_packet(struct dyn_packet_t *packet);
 void dyn_ax_18a_start_tx(void);
 void dyn_ax_18a_end_tx(void);
 void DynAx18aCheckTxComplete(void);

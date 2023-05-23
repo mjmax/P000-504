@@ -97,6 +97,8 @@ void DynAx18aInit(void)
 void dynRxPacketProcess(void)
 {
     debug_blink();
+    //dyne_test_echo_rx_packet(&dyn_rxpacket);
+    set_dyn_msg_received(false);
     // int8u i;
     // int8u id;
     // int8u length;
@@ -142,9 +144,26 @@ void dynRxPacketProcess(void)
     // }
 }
 
+void dyne_test_echo_rx_packet(struct dyn_packet_t *packet)
+{
+    int8u count = 0;
+    /*echo serial received data*/
+    SerialPutChar(packet->header1);
+    SerialPutChar(packet->header2);
+    SerialPutChar(packet->pid);
+    SerialPutChar(packet->plen);
+    SerialPutChar(packet->cmd);
+    for(count = 0; count < (packet->plen - (int8u)2); count++)
+    {
+        SerialPutChar(dyn_rxpacket.param[count]);
+    }
+    SerialPutChar(dyn_rxpacket.checksum);
+}
+
 bool runDynStateMachine(int8u ch)
 {
     static int8u loadCount = 0;
+    bool cksmEnable = false;
     bool status = true;
     int8u state = get_dyn_rx_state();
 
@@ -183,33 +202,40 @@ bool runDynStateMachine(int8u ch)
             set_dyn_rx_state(PLEN);
             break;
         case PLEN:
-            set_dyn_rx_state(INSTRUCTION);
             dyn_rxpacket.cmd = ch;
+            set_dyn_rx_state(ERROR);
             break;
-        case INSTRUCTION:
-            dyn_rxpacket.param[loadCount++] = ch;
-            set_dyn_rx_state(PLOADDATA);
+        case ERROR:
+            if(dyn_rxpacket.plen > (int8u)2)
+            {
+                dyn_rxpacket.param[loadCount++] = ch;
+                set_dyn_rx_state(PLOADDATA);
+            }
+            else
+                cksmEnable = true;
             break;
         case PLOADDATA:
-            dyn_rxpacket.param[loadCount++] = ch;
             if(loadCount >= (dyn_rxpacket.plen - (int8u)2))
             {
                 loadCount = 0;
-                set_dyn_rx_state(CHECKSUM);
+                cksmEnable = true;
             }
-            break;
-        case CHECKSUM:
-            dyn_rxpacket.checksum = ch;
-            if(dyn_checksum_validate(&dyn_rxpacket))
-            {
-                set_dyn_msg_received(true);
-            }
-
-            set_dyn_rx_state(IDLE);
+            else
+                dyn_rxpacket.param[loadCount++] = ch;
             break;
         default:
             set_dyn_rx_state(IDLE);
             break;
+    }
+
+    if(cksmEnable)
+    {
+        dyn_rxpacket.checksum = ch;
+        if(dyn_checksum_validate(&dyn_rxpacket))
+            set_dyn_msg_received(true);
+
+        set_dyn_rx_state(IDLE);
+        cksmEnable = false;
     }
 
     return status;

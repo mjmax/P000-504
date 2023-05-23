@@ -294,7 +294,6 @@ void SerialHandler(void)
 	{
 		dynRxPacketProcess();
 		//CommsSendString("TesPass\r\n");
-		set_dyn_msg_received(false);
 	}
 	TrySendCh();				// do not move this line (keep at last)
 }
