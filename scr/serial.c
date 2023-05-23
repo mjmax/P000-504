@@ -25,6 +25,12 @@ NOTES:          Due to potential corruption, many of these functions will
 #include "dyn_ax18a.h"
 #include "debug.h"
 
+#ifdef AVR_ATmega2560
+#define USART_UDRE_vect USART0_UDRE_vect
+#define USART_RX_vect USART0_RX_vect
+#define USART_TX_vect USART0_TX_vect
+#endif
+
 
 #define BAUD_TO_BAUDCTRL(baud, freq, bscale) ((freq / ((1 << bscale) * 16) / baud) - 1)
 #define BAUD_TO_BAUDCTRL_CLK2X(baud, freq, bscale) ((freq / ((1 << bscale) * 8) / baud) - 1)
@@ -315,10 +321,14 @@ ISR(USART_RX_vect)
 	int8u ucCh;
 	int8u err;
 
+	cli();
+
 	ucStatus = UCSR0A;
 	ucCh = UDR0;
 	err = ((1 << FE0) | (1 << UPE0) | (1 << DOR0));
-
+	//debug_blink();
+	//debug_debug_pin();
+	//PORTB ^= (1 << PB4);
 	if ((ucStatus & err) == 0x00)
 	{ 
 		/* only store if no errors (any of FE, DOR, PE will fail write) */
@@ -328,6 +338,8 @@ ISR(USART_RX_vect)
 		//if(is_last_char(ucCh))
 		//	sci_set_new_message(sci_get_new_message() + 1);
 	}
+
+	sei(); // Enable global interrupts
 }
 
 /* USART0, Data Register Empty Interrupt handler*/
