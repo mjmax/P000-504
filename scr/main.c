@@ -30,7 +30,7 @@ void bg_1000(void)
     //CommsSendString("SerialHandler\r\n");
     //SerialHandler();
     //dyn_test_servo();
-    dyn_test_received_position();
+    //dyn_test_received_position();
 
 }
 
@@ -70,20 +70,21 @@ int main(void)
 {
     //pinMode(D13, OUTPUT);
     degug_init();
-    DynAx18aInit();
+    //DynAx18aInit();
     //SerialInit(9600,NONE,EIGHT,ONE);
-    SerialInit(57600,NONE,EIGHT,ONE);
+    //SerialInit(57600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     //SerialInit(2000000,NONE,EIGHT,ONE);
-    Timer0Init(time_update);
+    //Timer0Init(time_update);
 
     sei(); // Enable global interrupts
 
     while(1)
     {
-        //_delay_ms(1000);
-        SerialHandler();
+        debug_debug_pin();
+        _delay_ms(1000);
+        //SerialHandler();
 
     }
     return 0;
