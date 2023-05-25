@@ -308,7 +308,6 @@ void SerialHandler(void)
 		dynRxPacketProcess();
 		//CommsSendString("TesPass\r\n");
 	}
-	TrySendCh();				// do not move this line (keep at last)
 }
 
 

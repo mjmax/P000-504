@@ -30,7 +30,8 @@ void bg_1000(void)
     //CommsSendString("SerialHandler\r\n");
     //SerialHandler();
     //dyn_test_servo();
-    dyn_test_received_position();
+    //dyn_test_received_position();
+    set_ready_to_sample(true);
 
 }
 
@@ -84,7 +85,9 @@ int main(void)
     {
         //_delay_ms(1000);
         SerialHandler();
-
+    	dynTxPacketProcess();
+        
+	    TrySendCh();				// do not move this line (keep at last)
     }
     return 0;
 }
