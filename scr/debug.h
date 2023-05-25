@@ -11,7 +11,7 @@
 
 void degug_init(void);
 void debug_blink(void);
-void debug_debug_pin(void);
+void blink_debug_pin(void);
 
 
 #endif /* DEBUG_H_ */

@@ -24,7 +24,7 @@ void debug_blink(void)
     flip = !flip; 
 }
 
-void debug_debug_pin(void)
+void blink_debug_pin(void)
 {
     static bool flip = true;
 
