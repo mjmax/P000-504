@@ -100,6 +100,7 @@ typedef struct{
 #define DEF_NONE                       0xFF
 
 typedef enum {IDLE = 0, HEADER1, HEADER2, PID, PLEN, ERROR, PLOADDATA}dyn_rx_state_t;
+typedef enum {IDLE_TX = 0, SET_M1_POS, SET_M2_POS, SET_M3_POS, READ_M1_POS, READ_M2_POS, READ_M3_POS, EXECUTE}dyn_tx_state_t;
 
 struct dyn_packet_t
 {
@@ -116,9 +117,17 @@ struct dyn_packet_t
 void DynAx18aInit(void);
 
 void dynRxPacketProcess(void);
+void dynTxPacketProcess(void);
+bool is_ready_to_sample(void); // this function should move to another c file call sampling.c
+void set_ready_to_sample(bool status); // this function should move to another c file call sampling.c
 bool runDynStateMachine(int8u ch);
 void dyneReadSerial(int8u ch);
+int8u dyn_cheksum_generate(struct dyn_packet_t *packet);
 bool dyn_checksum_validate(struct dyn_packet_t *packet);
+void set_dyn_tx_state(int8u state);
+int8u get_dyn_tx_state(void);
+void set_ready_to_transmit(bool status);
+bool is_ready_to_transmit(void);
 int8u get_dyn_rx_state(void);
 void set_dyn_rx_state(int8u state);
 void set_dyn_msg_received(bool status);
@@ -130,8 +139,12 @@ void dyn_test_int(void);
 void dyn_test_servo(void);
 void dyne_test_echo_rx_packet(struct dyn_packet_t *packet);
 void dyn_test_received_position(void);
+void dyn_packet_transmit(struct dyn_packet_t *packet);
 void dyn_ax_18a_start_tx(void);
 void dyn_ax_18a_end_tx(void);
 void DynAx18aCheckTxComplete(void);
+
+void dyn_packet_goal_pos(int8u add, int16u value);
+void dyn_packet_read_pos(int8u add);
 
 #endif

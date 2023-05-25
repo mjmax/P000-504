@@ -25,13 +25,20 @@ char teststring1[20];
 char teststring2[20];
 char teststring3[20];
 
+int16u motorPos[BUFFER_SIZE];
+int8u dynErr = 0;
+bool readyToTransmit = false;
+
 struct dyn_packet_t dyn_rxpacket;
 int8u dynRxData[50];
 struct dyn_packet_t dyn_txpacket;
 int8u dynTxData[50];
 
 int8u dynRxState = IDLE;
+int8u dynTxState = IDLE_TX;
 bool dynMsgReceived = false;
+
+bool readyToSample = false; //this flog should move to another c file called sample.c
 
 
 const int8u dynePacketInst[] = {DYN_PACKET_INST_PING, DYN_PACKET_INST_READ, DYN_PACKET_INST_WRITE, DYN_PACKET_INST_REG_WRITE, DYN_PACKET_INST_ACTION, 
@@ -92,6 +99,7 @@ void DynAx18aInit(void)
     dyn_packet_init(&dyn_rxpacket, dynRxData);
     dyn_packet_init(&dyn_txpacket, dynTxData);
     set_dyn_msg_received(false);
+    set_ready_to_transmit(true);
     pinMode(DYN_AX18A_DIR_PIN, OUTPUT);
 }
 
@@ -99,50 +107,100 @@ void dynRxPacketProcess(void)
 {
     debug_blink();
     //debug_blink();dyne_test_echo_rx_packet(&dyn_rxpacket);
+    switch(dyn_txpacket.cmd)
+    {
+        case DYN_PACKET_INST_PING:
+        case DYN_REG_GOAL_POSITION:
+            dynErr = dyn_rxpacket.cmd; //dyn_rxpacket.cmd is the corresponding instruction for transmission and corresponding error for reception
+            break;
+        case DYN_REG_PRESENT_POSITION:
+            motorPos[dyn_rxpacket.pid] = (dyn_rxpacket.param[0] + (dyn_rxpacket.param[1] << 8));
+            break;
+        /*TO DO*/
+    }
     set_dyn_msg_received(false);
-    // int8u i;
-    // int8u id;
-    // int8u length;
-    // int8u error;
-    // int8u checksum;
-    // int8u rx_checksum;
+    set_ready_to_transmit(true);
+}
 
-    // if(get_dyn_msg_received())
-    // {
-    //     set_dyn_msg_received(false);
-    //     id = dyn_rxpacket.id;
-    //     length = dyn_rxpacket.length;
-    //     error = dyn_rxpacket.error;
-    //     checksum = dyn_rxpacket.checksum;
-    //     rx_checksum = dynRxData[length + 4];
+void dynTxPacketProcess(void)
+{
+    int8u state;
+    static bool highPos = true;
+    if(is_ready_to_transmit())
+    {
+        state = get_dyn_tx_state();
+        switch (state)
+        {
+        case IDLE_TX:
+            if(is_ready_to_sample())
+            {
+                set_dyn_tx_state(READ_M1_POS);
+                set_ready_to_sample(false);
+            }
+            break;
+        case SET_M1_POS:
+            if(highPos)
+            {
+                dyn_packet_goal_pos(1,1023);
+            }
+            else
+                dyn_packet_goal_pos(1,512);
+            set_dyn_tx_state(SET_M2_POS);  
+            break;
+        case SET_M2_POS:
+            if(highPos)
+            {
+                dyn_packet_goal_pos(2,1023);
+            }
+            else
+                dyn_packet_goal_pos(2,512);
+            set_dyn_tx_state(SET_M3_POS);  
+            break;
+        case SET_M3_POS:
+            if(highPos)
+            {
+                dyn_packet_goal_pos(3,1023);
+            }
+            else
+                dyn_packet_goal_pos(3,512);
+            highPos = !highPos;
+            set_dyn_tx_state(IDLE_TX);  
+            break;
+        case EXECUTE:
+            break;
+        case READ_M1_POS:
+            dyn_packet_read_pos(1);
+            set_dyn_tx_state(READ_M2_POS);
+            break;
+        case READ_M2_POS:
+            dyn_packet_read_pos(2);
+            set_dyn_tx_state(READ_M3_POS);
+            break;
+        case READ_M3_POS:
+            dyn_packet_read_pos(3);
+            set_dyn_tx_state(SET_M1_POS);   
+            break;
+        
+        default:
+            break;
+        }
 
-    //     if(id == DYN_BROADCAST_ID)
-    //     {
-    //         // do nothing
-    //     }
-    //     else
-    //     {
-    //         if(rx_checksum == checksum)
-    //         {
-    //             if(error != 0)
-    //             {
-    //                 // error
-    //             }
-    //             else
-    //             {
-    //                 // process data
-    //                 for(i = 0; i < length; i++)
-    //                 {
-    //                     dyn_rxpacket.data[i] = dynRxData[i + 5];
-    //                 }
-    //             }
-    //         }
-    //         else
-    //         {
-    //             // checksum error
-    //         }
-    //     }
-    // }
+        if(state != IDLE_TX)
+        {
+            dyn_packet_transmit(&dyn_txpacket);
+            set_ready_to_transmit(false);
+        }
+    }
+}
+
+bool is_ready_to_sample(void)
+{
+    return readyToSample;
+}
+
+void set_ready_to_sample(bool status)
+{
+    readyToSample = status;
 }
 
 void dyne_test_echo_rx_packet(struct dyn_packet_t *packet)
@@ -278,6 +336,19 @@ void dyneReadSerial(int8u ch)
     //SerialPutChar(ch);
 }
 
+int8u dyn_cheksum_generate(struct dyn_packet_t *packet)
+{
+    int8u checksum = 0,count = 0;
+
+    checksum += packet->pid;
+    checksum += packet->plen;
+    checksum += packet->cmd;
+    for(count = 0; count < (packet->plen - (int8u)2); count++)
+        checksum += packet->param[count];
+    checksum = ~checksum; 
+    packet->checksum = checksum;  
+}
+
 bool dyn_checksum_validate(struct dyn_packet_t *packet)
 {
     int8u checksum = 0,count = 0;
@@ -291,6 +362,26 @@ bool dyn_checksum_validate(struct dyn_packet_t *packet)
 
     //SerialPutChar(checksum);
     return (checksum == packet->checksum)? true: false;
+}
+
+void set_dyn_tx_state(int8u state)
+{
+    dynTxState = state;
+}
+
+int8u get_dyn_tx_state(void)
+{
+    return dynTxState;
+}
+
+void set_ready_to_transmit(bool status)
+{
+    readyToTransmit = status;
+}
+
+bool is_ready_to_transmit(void)
+{
+    return readyToTransmit;
 }
 
 void set_dyn_msg_received(bool status)
@@ -393,6 +484,19 @@ void dyn_test_received_position(void)
     CommsSendString(teststring3);
 }
 
+void dyn_packet_transmit(struct dyn_packet_t *packet)
+{
+    int8u count = 0;
+    SerialPutChar(packet->header1);
+    SerialPutChar(packet->header2);
+    SerialPutChar(packet->pid);
+    SerialPutChar(packet->plen);
+    SerialPutChar(packet->cmd);
+    for(count = 0; count < (packet->plen - (int8u)2); count++)
+        SerialPutChar(packet->param[count]);
+    SerialPutChar(packet->checksum);
+}
+
 void DynAx18aCheckTxComplete(void)
 {
     if(get_tx_status())
@@ -409,5 +513,48 @@ void dyn_ax_18a_end_tx(void)
 void dyn_ax_18a_start_tx(void)
 {
     set_tx_status(FALSE);
+    //set_ready_to_transmit(FALSE);
     digitalWrite(DYN_AX18A_DIR_PIN, HIGH);
+}
+
+
+//Dynemixcel transmit packet creation fro different purposes//
+
+void dyn_packet_goal_pos(int8u add, int16u value)
+{
+    int8u cksm = 0;
+    int8u dynReg = DYN_REG_GOAL_POSITION;
+    int16u setPoint;
+    if(value > 1023)
+        setPoint = 1023;
+    else
+        setPoint = value;
+
+    dyn_txpacket.header1 = DYN_PACKET_HEADER1;
+    dyn_txpacket.header2 = DYN_PACKET_HEADER2;
+    dyn_txpacket.pid = add;
+    dyn_txpacket.plen = 0x05;
+    dyn_txpacket.cmd = DYN_PACKET_INST_WRITE;
+    dyn_txpacket.param[0] = dynReg;
+    dyn_txpacket.param[1] = (int8u)(0xFF & setPoint);
+    dyn_txpacket.param[2] = (int8u)(0xFF & (setPoint >> 8));
+    //cksm = dyn_cheksum_generate(&dyn_txpacket);
+    dyn_cheksum_generate(&dyn_txpacket);
+}
+
+void dyn_packet_read_pos(int8u add)
+{
+    int8u cksm = 0;
+    int8u dynReg = DYN_REG_PRESENT_POSITION;
+
+    dyn_txpacket.header1 = DYN_PACKET_HEADER1;
+    dyn_txpacket.header2 = DYN_PACKET_HEADER2;
+    dyn_txpacket.pid = add;
+    dyn_txpacket.plen = 0x04;
+    dyn_txpacket.cmd = DYN_PACKET_INST_READ;
+    dyn_txpacket.param[0] = dynReg;
+    dyn_txpacket.param[1] = 2;//regTable[dynReg].size;
+    //cksm = dyn_cheksum_generate(&dyn_txpacket);
+    dyn_cheksum_generate(&dyn_txpacket);
+    //dyn_txpacket.checksum = cksm;
 }

@@ -31,6 +31,8 @@ void bg_1000(void)
     //SerialHandler();
     //dyn_test_servo();
     //dyn_test_received_position();
+    set_ready_to_sample(true);
+
 }
 
 void bg_tick(void)
@@ -67,11 +69,11 @@ void time_update(void)
 
 int main(void)
 {
-    pinMode(D13, OUTPUT);
+    //pinMode(D13, OUTPUT);
     degug_init();
-    //DynAx18aInit();
+    DynAx18aInit();
     //SerialInit(9600,NONE,EIGHT,ONE);
-    //SerialInit(57600,NONE,EIGHT,ONE);
+    SerialInit(57600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     //SerialInit(2000000,NONE,EIGHT,ONE);
@@ -81,10 +83,11 @@ int main(void)
 
     while(1)
     {
-        //blink_debug_pin();
-        _delay_ms(1000);
-        //SerialHandler();
-
+        //_delay_ms(1000);
+        SerialHandler();
+    	dynTxPacketProcess();
+        
+	    TrySendCh();				// do not move this line (keep at last)
     }
     return 0;
 }

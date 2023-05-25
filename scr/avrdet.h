@@ -3,7 +3,7 @@
 
 /*Config Microcontroller*/
 //#define AVR_ATmega328P  0x01
-#define AVR_ATmega2560 0x01
+#define AVR_ATmega2560  0x01
 
 #ifdef AVR_ATmega328P
 #define F_CPU 16588800UL
