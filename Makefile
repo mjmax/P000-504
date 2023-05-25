@@ -9,29 +9,29 @@ OBJ_DIR = obj
 MAIN_HEX_PATH = $(OUTPUT_DIR)/$(MAIN_APP).hex
 
 # Compiler and other settings
-AVR_DIR = W:\utility\Arduino\hardware\tools\avr
-CC = $(AVR_DIR)\bin\avr-gcc.exe
-OBJCOPY = $(AVR_DIR)\bin\avr-objcopy.exe
-AVRDUDE = $(AVR_DIR)\bin\avrdude.exe -C "$(AVR_DIR)\etc\avrdude.conf"
+AVR_DIR = C:\Program Files (x86)\Arduino\hardware\tools\avr\bin
+CC = $(AVR_DIR)\avr-gcc.exe
+OBJCOPY = $(AVR_DIR)\avr-objcopy.exe
+AVRDUDE := avrdude -C "$(AVR_DIR)\..\etc\avrdude.conf"
 
 # Options for avr-gcc
 CFLAGS = -g -Os -mmcu=atmega2560
+
+# Linking options for avr-gcc
+#LFLAGS = -mmcu=atmega328p
 
 # Options for HEX file generation
 HFLAGS = -j .text -j .data -O ihex
 
 # Options for avrdude to burn the hex file
-#DUDEFLAGS += -v
-#DUDEFLAGS = -c stk500v2
-#DUDEFLAGS = -c avrispMkII
 DUDEFLAGS = -c wiring
-#DUDEFLAGS = -c arduino
 DUDEFLAGS += -p m2560
 DUDEFLAGS += -P COM10
 DUDEFLAGS += -b 115200
 DUDEFLAGS += -D
 DUDEFLAGS += -F
 DUDEFLAGS += -U flash:w:$(MAIN_HEX_PATH):i
+#DUDEFLAGS += -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFF:m
 
 # Directory for source and header files
 SRC_DIR = scr
@@ -48,18 +48,16 @@ INCLUDE = -I$(SRC_DIR)
 # Build target
 all: build burn
 
-# Rebuild target
-rebuild: clean build
-
-build: $(MAIN_HEX_PATH)
+build: $(OUTPUT_DIR) $(OBJ_DIR) $(MAIN_HEX_PATH)
+	@echo "Build completed successfully!"
 
 $(MAIN_HEX_PATH): $(OUTPUT_DIR)/$(MAIN_APP).elf
 	$(OBJCOPY) $(HFLAGS) $< $@
 
-$(OUTPUT_DIR)/$(MAIN_APP).elf: $(OBJ) | $(OUTPUT_DIR)
+$(OUTPUT_DIR)/$(MAIN_APP).elf: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 # Command to burn the hex file
