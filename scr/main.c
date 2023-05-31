@@ -73,7 +73,7 @@ int main(void)
     degug_init();
     DynAx18aInit();
     //SerialInit(9600,NONE,EIGHT,ONE);
-    SerialInit(57600,NONE,EIGHT,ONE);
+    SerialInit(SCI_PORT_1,57600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     //SerialInit(2000000,NONE,EIGHT,ONE);

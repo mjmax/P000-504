@@ -42,7 +42,15 @@ NOTES:          Due to potential corruption, many of these functions will
 #define BAUD_TO_BAUDCTRL_FIXED(baud) BAUD_TO_BAUDCTRL(baud, F_CPU, BSCALE)
 #define BAUD_TO_BAUDCTRL_FIXED_CLK2X(baud) BAUD_TO_BAUDCTRL_CLK2X(baud, F_CPU, BSCALE)
 
+/* the A receiver buffer (RX1) */
+static int8u aucSioRx0Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioRx0BufferCtl;
 
+/* the A transmitter buffer (TX1) */
+static int8u aucSioTx0Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioTx0BufferCtl;
+
+#ifdef AVR_ATmega2560
 /* the A receiver buffer (RX1) */
 static int8u aucSioRx1Buffer[BUFFER_SIZE];
 struct t_fifo_ctl rSioRx1BufferCtl;
@@ -50,6 +58,23 @@ struct t_fifo_ctl rSioRx1BufferCtl;
 /* the A transmitter buffer (TX1) */
 static int8u aucSioTx1Buffer[BUFFER_SIZE];
 struct t_fifo_ctl rSioTx1BufferCtl;
+
+/* the A receiver buffer (RX1) */
+static int8u aucSioRx2Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioRx2BufferCtl;
+
+/* the A transmitter buffer (TX1) */
+static int8u aucSioTx2Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioTx2BufferCtl;
+
+/* the A receiver buffer (RX1) */
+static int8u aucSioRx3Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioRx3BufferCtl;
+
+/* the A transmitter buffer (TX1) */
+static int8u aucSioTx3Buffer[BUFFER_SIZE];
+struct t_fifo_ctl rSioTx3BufferCtl;
+#endif
 
 static bool  bTxIdle = 0;
 
@@ -71,11 +96,12 @@ char message[BUFFER_SIZE];
  * CAUTION: If interrupts are being used then EA must be set to 1
  *       after calling this function
  */
-void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits)
+void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u stopbits)
 {
-  	const uint8_t chsize[] = { (0<<UCSZ00), (1<<UCSZ00), (2<<UCSZ00), (3<<UCSZ00) };
+  	const uint8_t chsize[] = {(0<<UCSZ00), (1<<UCSZ00), (2<<UCSZ00), (3<<UCSZ00)};
   	uint8_t ctrlc;
   	uint16_t baudpscaler;
+	bool clk2xmode = false;
 
 	/* Initialize the buffers */
   	FifoInit(&rSioRx1BufferCtl, aucSioRx1Buffer, SIO_RX1_BUF_SIZE);
@@ -84,39 +110,90 @@ void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits)
 	/*Disable global interrupts*/
 	cli();
 
-	UCSR0B = 0x00; 	//disable while setting baud rate
-
-	/* Set Async, parity, data and stop bits */
-	ctrlc = UCSR0C;
-	ctrlc |= (NONE == parity) ? (0<<UPM00) : (EVEN == parity) ? (2<<UPM00) : (3<<UPM00);
-	ctrlc |= (1 == stopbits) ? (0<<USBS0) : (1<<USBS0);
-	ctrlc |= chsize[databits - 5];
-	UCSR0C = ctrlc;
-
-	/* Set baud with CLK2X = 0 (BSEL = fper/(2^bscale*16*fbaud) - 1 */
-	//if(baud >= 4800)
-	//{
-	//	usart->hardware->BAUDCTRLA = BAUD_TO_BAUDCTRL_FIXED(baud);
-	//	usart->hardware->BAUDCTRLB = (0 << USART_BSCALE_gp) | 0;
-	//}
-	//else
-	//{
-	//	usart->hardware->BAUDCTRLA = BAUD_TO_BAUDCTRL_LOW_BAUD(baud);
-	//	usart->hardware->BAUDCTRLB = (BACALE_LOW_BAUD << USART_BSCALE_gp) | 0;
-	//}
+  	/*Baud rate prescaler calculator*/
 	if(baud < 1000001)
   		baudpscaler = BAUD_TO_BAUDCTRL_FIXED(baud);
 	else
 	{
 		baudpscaler = BAUD_TO_BAUDCTRL_FIXED_CLK2X(baud);
-		UCSR0A |= (1 << U2X0);
+		clk2xmode = true;
 	}
 
-  	UBRR0H = (int8u) (baudpscaler >> 8) & 0x0F;
-	UBRR0L = (int8u) baudpscaler;
+	#ifdef AVR_ATmega328P
+		port = SCI_PORT_0;
+	#endif
 
-  	/* Enable receive and transmit */
-  	UCSR0B = ((1 << RXCIE0) | (1 << RXEN0) | (1 << TXEN0));
+	switch (port)
+	{
+		case SCI_PORT_0:
+			UCSR0B = 0x00; 	//disable while setting baud rate
+			/* Set Async, parity, data and stop bits */
+			ctrlc = UCSR0C;
+			ctrlc |= (NONE == parity) ? (0<<UPM00) : (EVEN == parity) ? (2<<UPM00) : (3<<UPM00);
+			ctrlc |= (1 == stopbits) ? (0<<USBS0) : (1<<USBS0);
+			ctrlc |= chsize[databits - 5];
+			UCSR0C = ctrlc;
+			/*set baud prescaler*/
+			UBRR0H = (int8u) (baudpscaler >> 8) & 0x0F;
+			UBRR0L = (int8u) baudpscaler;
+			/* Enable 2X mode*/
+			UCSR0A |= (clk2xmode)? (1 << U2X0) : UCSR0A;
+			/* Enable receive and transmit */
+			UCSR0B |= (1 << RXCIE0) | (1 << RXEN0) | (1 << TXEN0);
+			break;
+		#ifdef AVR_ATmega2560
+		case SCI_PORT_1:
+			UCSR1B = 0x00; 	//disable while setting baud rate
+			/* Set Async, parity, data and stop bits */
+			ctrlc = UCSR1C;
+			ctrlc |= (NONE == parity) ? (0<<UPM10) : (EVEN == parity) ? (2<<UPM10) : (3<<UPM10);
+			ctrlc |= (1 == stopbits) ? (0<<USBS1) : (1<<USBS1);
+			ctrlc |= chsize[databits - 5];
+			UCSR1C = ctrlc;
+			/*set baud prescaler*/
+			UBRR1H = (int8u) (baudpscaler >> 8) & 0x0F;
+			UBRR1L = (int8u) baudpscaler;
+			/* Enable 2X mode*/
+			UCSR1A |= (clk2xmode)? (1 << U2X1) : UCSR1A;
+			/* Enable receive and transmit */
+			UCSR1B |= (1 << RXCIE1) | (1 << RXEN1) | (1 << TXEN1);
+			break;
+		case SCI_PORT_2:
+			UCSR2B = 0x00; 	//disable while setting baud rate
+			/* Set Async, parity, data and stop bits */
+			ctrlc = UCSR2C;
+			ctrlc |= (NONE == parity) ? (0<<UPM20) : (EVEN == parity) ? (2<<UPM20) : (3<<UPM20);
+			ctrlc |= (1 == stopbits) ? (0<<USBS2) : (1<<USBS2);
+			ctrlc |= chsize[databits - 5];
+			UCSR2C = ctrlc;
+			/*set baud prescaler*/
+			UBRR2H = (int8u) (baudpscaler >> 8) & 0x0F;
+			UBRR2L = (int8u) baudpscaler;
+			/* Enable 2X mode*/
+			UCSR2A |= (clk2xmode)? (1 << U2X2) : UCSR2A;
+			/* Enable receive and transmit */
+			UCSR2B |= (1 << RXCIE2) | (1 << RXEN2) | (1 << TXEN2);
+			break;
+		case SCI_PORT_3:
+			UCSR3B = 0x00; 	//disable while setting baud rate
+			/* Set Async, parity, data and stop bits */
+			ctrlc = UCSR3C;
+			ctrlc |= (NONE == parity) ? (0<<UPM30) : (EVEN == parity) ? (2<<UPM30) : (3<<UPM30);
+			ctrlc |= (1 == stopbits) ? (0<<USBS3) : (1<<USBS3);
+			ctrlc |= chsize[databits - 5];
+			UCSR3C = ctrlc;
+			/*set baud prescaler*/
+			UBRR3H = (int8u) (baudpscaler >> 8) & 0x0F;
+			UBRR3L = (int8u) baudpscaler;
+			/* Enable 2X mode*/
+			UCSR3A |= (clk2xmode)? (1 << U2X3) : UCSR3A;
+			/* Enable receive and transmit */
+			UCSR3B |= (1 << RXCIE3) | (1 << RXEN3) | (1 << TXEN3);
+			break;
+		#endif
+		default:
+			break;
+	}
 
 	sei(); // Enable global interrupts
 }
@@ -222,18 +299,59 @@ char SerialGetChar(void)
  */
 void TrySendCh(void)
 {
-  if(FifoIsEmpty(&rSioTx1BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
-  {
-  	if(UCSR0A & (1 << UDRE0))
+
+  	if(FifoIsEmpty(&rSioTx0BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
   	{
-  		/* enable the UDRE interrupt */
-  		UCSR0B |= (1<< UDRIE0);
+  		if(UCSR0A & (1 << UDRE0))
+  		{
+  			/* enable the UDRE interrupt */
+  			UCSR0B |= (1<< UDRIE0);
+  		}
+  		else
+  			UCSR0B |= (1 << TXCIE0);
   	}
   	else
-  		UCSR0B |= (1 << TXCIE0);
-  }
-  else
-  	UCSR0B &= ~(1 << UDRIE0);
+  		UCSR0B &= ~(1 << UDRIE0);
+#ifdef AVR_ATmega2560
+  	if(FifoIsEmpty(&rSioTx1BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
+  	{
+  		if(UCSR1A & (1 << UDRE1))
+  		{
+  			/* enable the UDRE interrupt */
+  			UCSR1B |= (1<< UDRIE1);
+  		}
+  		else
+  			UCSR1B |= (1 << TXCIE1);
+  	}
+  	else
+  		UCSR1B &= ~(1 << UDRIE1);
+
+  	if(FifoIsEmpty(&rSioTx2BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
+  	{
+  		if(UCSR2A & (1 << UDRE2))
+  		{
+  			/* enable the UDRE interrupt */
+  			UCSR2B |= (1<< UDRIE2);
+  		}
+  		else
+  			UCSR2B |= (1 << TXCIE2);
+  	}
+  	else
+  		UCSR2B &= ~(1 << UDRIE2);
+
+  	if(FifoIsEmpty(&rSioTx3BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
+  	{
+  		if(UCSR3A & (1 << UDRE3))
+  		{
+  			/* enable the UDRE interrupt */
+  			UCSR3B |= (1<< UDRIE3);
+  		}
+  		else
+  			UCSR3B |= (1 << TXCIE3);
+	}
+  	else
+  		UCSR3B &= ~(1 << UDRIE3);
+#endif
 }
 
 
@@ -301,7 +419,7 @@ unsigned long SerialGetLong(void)
 void SerialHandler(void)
 {
 	
-	memset(message, '\0', arlen(message));
+	//memset(message, '\0', arlen(message));
 	ReadSerial();
 	if(is_dyn_msg_received())
 	{
@@ -367,5 +485,151 @@ ISR(USART_TX_vect)
 	/* disable this interrupt */
 	UCSR0B &= ~(1 << TXCIE0);
 }
+
+#ifdef AVR_ATmega2560
+/* USART1, Rx Complete Interrupt handler*/
+ISR(USART1_RX_vect)
+{
+	int8u ucStatus;
+	int8u ucCh;
+	int8u err;
+
+	cli();
+
+	ucStatus = UCSR1A;
+	ucCh = UDR1;
+	err = ((1 << FE1) | (1 << UPE1) | (1 << DOR1));
+	if ((ucStatus & err) == 0x00)
+	{ 
+		/* only store if no errors (any of FE, DOR, PE will fail write) */
+		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+	}
+
+	sei(); // Enable global interrupts
+}
+
+/* USART1, Data Register Empty Interrupt handler*/
+ISR(USART1_UDRE_vect)
+{
+	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	{ /* data still in current stream */
+		dyn_ax_18a_start_tx();
+		UDR1 = FifoGetChar(&rSioTx1BufferCtl);
+		UCSR1A |= (1 << TXC1);
+	}
+	else
+	{ /* DTR is holding things up on this channel */
+		/* disable this (the UDR) interrupt */
+		UCSR1B &= ~(1 << UDRIE1);
+		/* enable the TXC flag */
+		UCSR1B |= (1 << TXCIE1);
+	}
+}
+
+/* USART1, Tx Complete Interrupt handler*/
+ISR(USART1_TX_vect)
+	{ /* whatever was being transmitted has completed */
+	set_tx_status(TRUE);
+	dyn_ax_18a_end_tx();
+	/* disable this interrupt */
+	UCSR1B &= ~(1 << TXCIE1);
+}
+
+/* USART2, Rx Complete Interrupt handler*/
+ISR(USART2_RX_vect)
+{
+	int8u ucStatus;
+	int8u ucCh;
+	int8u err;
+
+	cli();
+
+	ucStatus = UCSR2A;
+	ucCh = UDR2;
+	err = ((1 << FE2) | (1 << UPE2) | (1 << DOR2));
+	if ((ucStatus & err) == 0x00)
+	{ 
+		/* only store if no errors (any of FE, DOR, PE will fail write) */
+		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+	}
+
+	sei(); // Enable global interrupts
+}
+
+/* USART2, Data Register Empty Interrupt handler*/
+ISR(USART2_UDRE_vect)
+{
+	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	{ /* data still in current stream */
+		dyn_ax_18a_start_tx();
+		UDR2 = FifoGetChar(&rSioTx1BufferCtl);
+		UCSR2A |= (1 << TXC2);
+	}
+	else
+	{ /* DTR is holding things up on this channel */
+		/* disable this (the UDR) interrupt */
+		UCSR2B &= ~(1 << UDRIE2);
+		/* enable the TXC flag */
+		UCSR2B |= (1 << TXCIE2);
+	}
+}
+
+/* USART2, Tx Complete Interrupt handler*/
+ISR(USART2_TX_vect)
+	{ /* whatever was being transmitted has completed */
+	set_tx_status(TRUE);
+	dyn_ax_18a_end_tx();
+	/* disable this interrupt */
+	UCSR2B &= ~(1 << TXCIE2);
+}
+
+/* USART3, Rx Complete Interrupt handler*/
+ISR(USART3_RX_vect)
+{
+	int8u ucStatus;
+	int8u ucCh;
+	int8u err;
+
+	cli();
+
+	ucStatus = UCSR3A;
+	ucCh = UDR3;
+	err = ((1 << FE3) | (1 << UPE3) | (1 << DOR3));
+	if ((ucStatus & err) == 0x00)
+	{ 
+		/* only store if no errors (any of FE, DOR, PE will fail write) */
+		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+	}
+
+	sei(); // Enable global interrupts
+}
+
+/* USART3, Data Register Empty Interrupt handler*/
+ISR(USART3_UDRE_vect)
+{
+	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	{ /* data still in current stream */
+		dyn_ax_18a_start_tx();
+		UDR3 = FifoGetChar(&rSioTx1BufferCtl);
+		UCSR3A |= (1 << TXC3);
+	}
+	else
+	{ /* DTR is holding things up on this channel */
+		/* disable this (the UDR) interrupt */
+		UCSR3B &= ~(1 << UDRIE3);
+		/* enable the TXC flag */
+		UCSR3B |= (1 << TXCIE3);
+	}
+}
+
+/* USART3, Tx Complete Interrupt handler*/
+ISR(USART3_TX_vect)
+	{ /* whatever was being transmitted has completed */
+	set_tx_status(TRUE);
+	dyn_ax_18a_end_tx();
+	/* disable this interrupt */
+	UCSR3B &= ~(1 << TXCIE3);
+}
+#endif
 
 

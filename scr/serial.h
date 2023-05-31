@@ -6,7 +6,8 @@
 typedef enum {FIVE = 5, SIX ,SEVEN, EIGHT} usartDataBits_t;
 typedef enum {ONE = 1, TWO } usartStopBits_t;
 typedef enum {NONE, ODD, EVEN } usartParity_t;
-typedef enum {BUFFER_RX, BUFFER_TX } usartBuffType_t ;
+typedef enum {BUFFER_RX, BUFFER_TX } usartBuffType_t;
+typedef enum {SCI_PORT_0, SCI_PORT_1, SCI_PORT_2, SCI_PORT_3, MAX_SCI_PORT} usartPort_t;
 
 
 ///.............Imports from X300-509 X350 rear board code.........//
@@ -48,7 +49,7 @@ void TrySendCh(void);
  *
  */
 void SerialHandler(void);
-void SerialInit(int32u baud, int8u parity, int8u databits, int8u stopbits);
+void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u stopbits);
 void SerialPutChar(char ch);
 void SerialPut(unsigned char *ptr, unsigned char length);
 void SerialPutStr(char *str);

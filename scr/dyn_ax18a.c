@@ -16,7 +16,7 @@
 #include <string.h>
 #include <util/delay.h>
 
-#define DYN_AX18A_DIR_PIN       D4
+#define DYN_AX18A_DIR_PIN       D2
 
 #define SERVO_ADD   0x01
 #define PACKET_LEN  0x05
