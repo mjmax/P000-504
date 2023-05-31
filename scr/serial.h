@@ -14,8 +14,17 @@ typedef enum {SCI_PORT_0, SCI_PORT_1, SCI_PORT_2, SCI_PORT_3, MAX_SCI_PORT} usar
 #define BUFFER_SIZE 254
 #define BUFFER_OFFSET 3
 
+#define SIO_RX0_BUF_SIZE	BUFFER_SIZE
+#define SIO_TX0_BUF_SIZE	BUFFER_SIZE
+
 #define SIO_RX1_BUF_SIZE	BUFFER_SIZE
 #define SIO_TX1_BUF_SIZE	BUFFER_SIZE
+
+#define SIO_RX2_BUF_SIZE	BUFFER_SIZE
+#define SIO_TX2_BUF_SIZE	BUFFER_SIZE
+
+#define SIO_RX3_BUF_SIZE	BUFFER_SIZE
+#define SIO_TX3_BUF_SIZE	BUFFER_SIZE
 
 #define PORT_CMD 0x30
 #define PORT_BT 0x31
@@ -41,6 +50,8 @@ extern char message[BUFFER_SIZE];
 bool is_last_char(int8u ucCh);
 void sci_set_new_message(int8u count);
 int8u sci_get_new_message(void);
+void set_current_sci_port(int8u port);
+int8u get_current_sci_port(void);
 void TrySendCh(void);
 //void DefaultMsgProcess(void);
 
@@ -48,20 +59,21 @@ void TrySendCh(void);
  *Serial read & write functions for communication with atmega8A
  *
  */
-void SerialHandler(void);
+void SerialIncommingHandler(void);
 void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u stopbits);
-void SerialPutChar(char ch);
-void SerialPut(unsigned char *ptr, unsigned char length);
-void SerialPutStr(char *str);
-void CommsSendString(char *reply);
+void SerialPutChar(int8u port,char ch);
+void SerialPut(int8u port, unsigned char *ptr, unsigned char length);
+void SerialPutStr(int8u port,char *str);
+void CommsSendString(int8u port,char *reply);
 char SerialGetChar(void);
 void SerialGetMsg(char *ptr);
 void SerialGet(char *ptr, int8u length);
 unsigned long SerialGetLong(void);
 void ReadSerial(void);
+void ProcessRxPacket(void);
 
-void set_tx_status(int8u status);
-bool get_tx_status(void);
+void set_tx_status(int8u port,int8u status);
+bool get_tx_status(int8u port);
 
 #endif
 

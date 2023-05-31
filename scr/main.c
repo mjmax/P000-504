@@ -27,11 +27,13 @@ void bg_100(void)
 
 void bg_1000(void)
 {
-    //CommsSendString("SerialHandler\r\n");
+    //CommsSendString(SCI_PORT_0,"SerialHandler\r\n");
     //SerialHandler();
     //dyn_test_servo();
     //dyn_test_received_position();
-    set_ready_to_sample(true);
+    set_ready_to_sample(SCI_PORT_1, true);
+    set_ready_to_sample(SCI_PORT_2, true);
+    set_ready_to_sample(SCI_PORT_3, true);
 
 }
 
@@ -73,7 +75,10 @@ int main(void)
     degug_init();
     DynAx18aInit();
     //SerialInit(9600,NONE,EIGHT,ONE);
+    SerialInit(SCI_PORT_0,57600,NONE,EIGHT,ONE);
     SerialInit(SCI_PORT_1,57600,NONE,EIGHT,ONE);
+    SerialInit(SCI_PORT_2,57600,NONE,EIGHT,ONE);
+    SerialInit(SCI_PORT_3,57600,NONE,EIGHT,ONE);
     //SerialInit(115200,NONE,EIGHT,ONE);
     //SerialInit(1000000,NONE,EIGHT,ONE);
     //SerialInit(2000000,NONE,EIGHT,ONE);
@@ -84,8 +89,8 @@ int main(void)
     while(1)
     {
         //_delay_ms(1000);
-        SerialHandler();
-    	dynTxPacketProcess();
+        SerialIncommingHandler();
+    	DynTxPacketProcess();
         
 	    TrySendCh();				// do not move this line (keep at last)
     }

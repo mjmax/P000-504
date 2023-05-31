@@ -117,34 +117,34 @@ struct dyn_packet_t
 void DynAx18aInit(void);
 
 void dynRxPacketProcess(void);
-void dynTxPacketProcess(void);
-bool is_ready_to_sample(void); // this function should move to another c file call sampling.c
-void set_ready_to_sample(bool status); // this function should move to another c file call sampling.c
+void DynTxPacketProcess(void);
+bool is_ready_to_sample(int8u port); // this function should move to another c file call sampling.c
+void set_ready_to_sample(int8u port, bool status); // this function should move to another c file call sampling.c
 bool runDynStateMachine(int8u ch);
 void dyneReadSerial(int8u ch);
 int8u dyn_cheksum_generate(struct dyn_packet_t *packet);
 bool dyn_checksum_validate(struct dyn_packet_t *packet);
 void set_dyn_tx_state(int8u state);
 int8u get_dyn_tx_state(void);
-void set_ready_to_transmit(bool status);
-bool is_ready_to_transmit(void);
+void set_ready_to_transmit(int8u port, bool status);
+bool is_ready_to_transmit(int8u port);
 int8u get_dyn_rx_state(void);
 void set_dyn_rx_state(int8u state);
-void set_dyn_msg_received(bool status);
-bool is_dyn_msg_received(void);
+void set_dyn_msg_received(int8u port,bool status);
+bool is_dyn_msg_received(int8u port);
 void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata);
-void dyn_rx_packet_load(struct dyn_packet_t *packet);
-void dyn_rx_packet_load(struct dyn_packet_t *packet);
+//void dyn_rx_packet_load(struct dyn_packet_t *packet);
+//void dyn_tx_packet_load(struct dyn_packet_t *packet);
 void dyn_test_int(void);
 void dyn_test_servo(void);
-void dyne_test_echo_rx_packet(struct dyn_packet_t *packet);
+void dyne_test_echo_rx_packet(int8u port,struct dyn_packet_t *packet);
 void dyn_test_received_position(void);
-void dyn_packet_transmit(struct dyn_packet_t *packet);
-void dyn_ax_18a_start_tx(void);
-void dyn_ax_18a_end_tx(void);
-void DynAx18aCheckTxComplete(void);
+void dyn_packet_transmit(int8u port, struct dyn_packet_t *packet);
+void dyn_ax_18a_start_tx(int8u port);
+void dyn_ax_18a_end_tx(int8u port);
+//void DynAx18aCheckTxComplete(void);
 
-void dyn_packet_goal_pos(int8u add, int16u value);
-void dyn_packet_read_pos(int8u add);
+void dyn_packet_goal_pos(struct dyn_packet_t *packet, int8u add, int16u value);
+void dyn_packet_read_pos(struct dyn_packet_t *packet, int8u add);
 
 #endif

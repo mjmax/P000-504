@@ -16,7 +16,11 @@
 #include <string.h>
 #include <util/delay.h>
 
-#define DYN_AX18A_DIR_PIN       D2
+
+#define DYN_AX18A_DIR_PIN_0       D5
+#define DYN_AX18A_DIR_PIN_1       D2
+#define DYN_AX18A_DIR_PIN_2       D3
+#define DYN_AX18A_DIR_PIN_3       D4
 
 #define SERVO_ADD   0x01
 #define PACKET_LEN  0x05
@@ -29,13 +33,36 @@ int16u motorPos[BUFFER_SIZE];
 int8u dynErr = 0;
 bool readyToTransmit = false;
 
-struct dyn_packet_t dyn_rxpacket;
-int8u dynRxData[50];
-struct dyn_packet_t dyn_txpacket;
-int8u dynTxData[50];
+struct dyn_packet_t dyn_rx0packet;
+int8u dynRx0Data[50];
+struct dyn_packet_t dyn_tx0packet;
+int8u dynTx0Data[50];
 
-int8u dynRxState = IDLE;
-int8u dynTxState = IDLE_TX;
+#ifdef AVR_ATmega2560
+struct dyn_packet_t dyn_rx1packet;
+int8u dynRx1Data[50];
+struct dyn_packet_t dyn_tx1packet;
+int8u dynTx1Data[50];
+
+struct dyn_packet_t dyn_rx2packet;
+int8u dynRx2Data[50];
+struct dyn_packet_t dyn_tx2packet;
+int8u dynTx2Data[50];
+
+struct dyn_packet_t dyn_rx3packet;
+int8u dynRx3Data[50];
+struct dyn_packet_t dyn_tx3packet;
+int8u dynTx3Data[50];
+#endif
+
+int8u dynRx0State = IDLE;
+int8u dynTx0State = IDLE_TX;
+int8u dynRx1State = IDLE;
+int8u dynTx1State = IDLE_TX;
+int8u dynRx2State = IDLE;
+int8u dynTx2State = IDLE_TX;
+int8u dynRx3State = IDLE;
+int8u dynTx3State = IDLE_TX;
 bool dynMsgReceived = false;
 
 bool readyToSample = false; //this flog should move to another c file called sample.c
@@ -96,88 +123,151 @@ static const dynReg_t regTable[] =
 void DynAx18aInit(void)
 {
     dyn_test_int();
-    dyn_packet_init(&dyn_rxpacket, dynRxData);
-    dyn_packet_init(&dyn_txpacket, dynTxData);
-    set_dyn_msg_received(false);
-    set_ready_to_transmit(true);
-    pinMode(DYN_AX18A_DIR_PIN, OUTPUT);
+    dyn_packet_init(&dyn_rx0packet, dynRx0Data);
+    dyn_packet_init(&dyn_tx0packet, dynTx0Data);
+    set_dyn_msg_received(SCI_PORT_0,false);
+    set_ready_to_transmit(SCI_PORT_0, true);
+    pinMode(DYN_AX18A_DIR_PIN_0, OUTPUT);
+
+#ifdef AVR_ATmega2560
+    dyn_packet_init(&dyn_rx1packet, dynRx1Data);
+    dyn_packet_init(&dyn_tx1packet, dynTx1Data);
+    set_dyn_msg_received(SCI_PORT_1,false);
+    set_ready_to_transmit(SCI_PORT_1, true);
+    pinMode(DYN_AX18A_DIR_PIN_1, OUTPUT);
+
+    dyn_packet_init(&dyn_rx2packet, dynRx2Data);
+    dyn_packet_init(&dyn_tx2packet, dynTx2Data);
+    set_dyn_msg_received(SCI_PORT_2,false);
+    set_ready_to_transmit(SCI_PORT_2, true);
+    pinMode(DYN_AX18A_DIR_PIN_2, OUTPUT);
+
+    dyn_packet_init(&dyn_rx3packet, dynRx3Data);
+    dyn_packet_init(&dyn_tx3packet, dynTx3Data);
+    set_dyn_msg_received(SCI_PORT_3,false);
+    set_ready_to_transmit(SCI_PORT_3, true);
+    pinMode(DYN_AX18A_DIR_PIN_3, OUTPUT);
+#endif
 }
 
 void dynRxPacketProcess(void)
 {
+    int8u cport = get_current_sci_port();
+    struct dyn_packet_t *packet = &dyn_rx0packet;
+    
     debug_blink();
-    //debug_blink();dyne_test_echo_rx_packet(&dyn_rxpacket);
-    switch(dyn_txpacket.cmd)
+#ifdef AVR_ATmega2560
+    switch(cport)
+    {
+        case SCI_PORT_0:
+            packet = &dyn_rx0packet;
+            break;
+        case SCI_PORT_1:
+            packet = &dyn_rx1packet;
+            break;
+        case SCI_PORT_2:
+            packet = &dyn_rx2packet;
+            break;
+        case SCI_PORT_3:
+            packet = &dyn_rx3packet;
+            break;
+    }
+#endif
+    switch(packet->cmd)
     {
         case DYN_PACKET_INST_PING:
         case DYN_REG_GOAL_POSITION:
-            dynErr = dyn_rxpacket.cmd; //dyn_rxpacket.cmd is the corresponding instruction for transmission and corresponding error for reception
+            dynErr = packet->cmd; //dyn_rxpacket.cmd is the corresponding instruction for transmission and corresponding error for reception
             break;
         case DYN_REG_PRESENT_POSITION:
-            motorPos[dyn_rxpacket.pid] = (dyn_rxpacket.param[0] + (dyn_rxpacket.param[1] << 8));
+            motorPos[packet->pid] = (packet->param[0] + (packet->param[1] << 8));
             break;
         /*TO DO*/
     }
-    set_dyn_msg_received(false);
-    set_ready_to_transmit(true);
+    set_dyn_msg_received(cport, false);
+    set_ready_to_transmit(cport, true);
 }
 
-void dynTxPacketProcess(void)
+void DynTxPacketProcess(void)
 {
     int8u state;
     static bool highPos = true;
-    if(is_ready_to_transmit())
+    struct dyn_packet_t *packet;
+
+    int8u cport = SCI_PORT_3;   // configurable port to drive the motor
+
+    switch (cport)
     {
+        case SCI_PORT_0:
+            packet = &dyn_tx0packet;
+            break;
+        case SCI_PORT_1:
+            packet = &dyn_tx1packet;
+            break;
+        case SCI_PORT_2:
+            packet = &dyn_tx2packet;
+            break;
+        case SCI_PORT_3:
+            packet = &dyn_tx3packet;
+            break;
+        default:
+            packet = &dyn_tx0packet;
+            break;
+    }
+
+    if(is_ready_to_transmit(cport))
+    {
+        //CommsSendString(SCI_PORT_0, "TestPassed\r\n");
         state = get_dyn_tx_state();
         switch (state)
         {
         case IDLE_TX:
-            if(is_ready_to_sample())
+            if(is_ready_to_sample(cport))
             {
                 set_dyn_tx_state(READ_M1_POS);
-                set_ready_to_sample(false);
+                set_ready_to_sample(cport, false);
             }
             break;
         case SET_M1_POS:
             if(highPos)
             {
-                dyn_packet_goal_pos(1,1023);
+                dyn_packet_goal_pos(packet, 1, 1023);
             }
             else
-                dyn_packet_goal_pos(1,512);
+                dyn_packet_goal_pos(packet, 1, 512);
             set_dyn_tx_state(SET_M2_POS);  
             break;
         case SET_M2_POS:
             if(highPos)
             {
-                dyn_packet_goal_pos(2,1023);
+                dyn_packet_goal_pos(packet, 2, 1023);
             }
             else
-                dyn_packet_goal_pos(2,512);
+                dyn_packet_goal_pos(packet, 2, 512);
             set_dyn_tx_state(SET_M3_POS);  
             break;
         case SET_M3_POS:
             if(highPos)
             {
-                dyn_packet_goal_pos(3,1023);
+                dyn_packet_goal_pos(packet, 3, 1023);
             }
             else
-                dyn_packet_goal_pos(3,512);
+                dyn_packet_goal_pos(packet, 3, 512);
             highPos = !highPos;
             set_dyn_tx_state(IDLE_TX);  
             break;
         case EXECUTE:
             break;
         case READ_M1_POS:
-            dyn_packet_read_pos(1);
+            dyn_packet_read_pos(packet, 1);
             set_dyn_tx_state(READ_M2_POS);
             break;
         case READ_M2_POS:
-            dyn_packet_read_pos(2);
+            dyn_packet_read_pos(packet, 2);
             set_dyn_tx_state(READ_M3_POS);
             break;
         case READ_M3_POS:
-            dyn_packet_read_pos(3);
+            dyn_packet_read_pos(packet, 3);
             set_dyn_tx_state(SET_M1_POS);   
             break;
         
@@ -187,51 +277,74 @@ void dynTxPacketProcess(void)
 
         if(state != IDLE_TX)
         {
-            dyn_packet_transmit(&dyn_txpacket);
-            set_ready_to_transmit(false);
+            dyn_packet_transmit(cport, packet);
+            set_ready_to_transmit(cport, false);
         }
     }
 }
 
-bool is_ready_to_sample(void)
+bool is_ready_to_sample(int8u port)
 {
-    return readyToSample;
+    return (readyToSample & (1 << port))? true : false;
 }
 
-void set_ready_to_sample(bool status)
+void set_ready_to_sample(int8u port, bool status)
 {
-    readyToSample = status;
+    if(status)
+        readyToSample |= (1 << port);
+    else 
+        readyToSample &= ~(1 << port); 
 }
 
-void dyne_test_echo_rx_packet(struct dyn_packet_t *packet)
+void dyne_test_echo_rx_packet(int8u port,struct dyn_packet_t *packet)
 {
     int8u count = 0;
     /*echo serial received data*/
-    SerialPutChar(packet->header1);
-    SerialPutChar(packet->header2);
-    SerialPutChar(packet->pid);
-    SerialPutChar(packet->plen);
-    SerialPutChar(packet->cmd);
+    SerialPutChar(port, packet->header1);
+    SerialPutChar(port, packet->header2);
+    SerialPutChar(port, packet->pid);
+    SerialPutChar(port, packet->plen);
+    SerialPutChar(port, packet->cmd);
     for(count = 0; count < (packet->plen - (int8u)2); count++)
     {
-        SerialPutChar(dyn_rxpacket.param[count]);
+        SerialPutChar(port, packet->param[count]);
     }
-    SerialPutChar(dyn_rxpacket.checksum);
+    SerialPutChar(port, packet->checksum);
 }
 
 bool runDynStateMachine(int8u ch)
 {
-    static int8u loadCount = 0;
+    static int8u loadCount[MAX_SCI_PORT] = {0, 0, 0, 0};
     bool cksmEnable = false;
     bool status = true;
+    struct dyn_packet_t *packet = &dyn_rx0packet;
     int8u state = get_dyn_rx_state();
+    int8u cport = get_current_sci_port();
+
+#ifdef AVR_ATmega2560
+    switch (cport)
+    {
+    case SCI_PORT_0:
+        packet = &dyn_rx0packet;
+        break;
+    case SCI_PORT_1:    
+        packet = &dyn_rx1packet;
+        break;
+    case SCI_PORT_2:    
+        packet = &dyn_rx2packet;
+        break;
+    case SCI_PORT_3:    
+        packet = &dyn_rx3packet;
+        break;
+    }
+#endif
 
     switch(state)
     {
         case IDLE:
             if(ch == DYN_PACKET_HEADER1)
             {
-                dyn_rxpacket.header1 = ch;
+                packet->header1 = ch;
                 set_dyn_rx_state(HEADER1);
             }
             else
@@ -243,7 +356,7 @@ bool runDynStateMachine(int8u ch)
         case HEADER1:
             if(ch == DYN_PACKET_HEADER2)
             {
-                dyn_rxpacket.header2 = ch;
+                packet->header2 = ch;
                 set_dyn_rx_state(HEADER2);
             }
             else
@@ -253,34 +366,34 @@ bool runDynStateMachine(int8u ch)
             }
             break;
         case HEADER2:
-            dyn_rxpacket.pid = ch;
+            packet->pid = ch;
             set_dyn_rx_state(PID);
             break;
         case PID:
-            dyn_rxpacket.plen = ch;
+            packet->plen = ch;
             set_dyn_rx_state(PLEN);
             break;
         case PLEN:
-            dyn_rxpacket.cmd = ch;
+            packet->cmd = ch;
             set_dyn_rx_state(ERROR);
             break;
         case ERROR:
-            if(dyn_rxpacket.plen > (int8u)2)
+            if(packet->plen > (int8u)2)
             {
-                dyn_rxpacket.param[loadCount++] = ch;
+                packet->param[loadCount[cport]++] = ch;
                 set_dyn_rx_state(PLOADDATA);
             }
             else
                 cksmEnable = true;
             break;
         case PLOADDATA:
-            if(loadCount >= (dyn_rxpacket.plen - (int8u)2))
+            if(loadCount[cport] >= (packet->plen - (int8u)2))
             {
-                loadCount = 0;
+                loadCount[cport] = 0;
                 cksmEnable = true;
             }
             else
-                dyn_rxpacket.param[loadCount++] = ch;
+                packet->param[loadCount[cport]++] = ch;
             break;
         default:
             set_dyn_rx_state(IDLE);
@@ -290,9 +403,9 @@ bool runDynStateMachine(int8u ch)
     if(cksmEnable)
     {
         //debug_blink();
-        dyn_rxpacket.checksum = ch;
-        if(dyn_checksum_validate(&dyn_rxpacket))
-            set_dyn_msg_received(true);
+        packet->checksum = ch;
+        if(dyn_checksum_validate(packet))
+            set_dyn_msg_received(cport,true);
 
         set_dyn_rx_state(IDLE);
         cksmEnable = false;
@@ -322,10 +435,10 @@ void dyneReadSerial(int8u ch)
 
     if(h1Ok && h2Ok)
     {
-        dynRxData[dCount++] = ch;
+        dynRx0Data[dCount++] = ch;
     }
 
-    if((dCount >= 1) && (dCount >= dynRxData[1] + 1))
+    if((dCount >= 1) && (dCount >= dynRx0Data[1] + 1))
     {
         dCount = 0;
         h1Ok = false;
@@ -366,42 +479,85 @@ bool dyn_checksum_validate(struct dyn_packet_t *packet)
 
 void set_dyn_tx_state(int8u state)
 {
-    dynTxState = state;
+    dynTx1State = state;
 }
 
 int8u get_dyn_tx_state(void)
 {
-    return dynTxState;
+    return dynTx1State;
 }
 
-void set_ready_to_transmit(bool status)
+void set_ready_to_transmit(int8u port, bool status)
 {
-    readyToTransmit = status;
+    if(status)
+        readyToTransmit |= (1 << port);
+    else 
+         readyToTransmit &= ~(1 << port);  
 }
 
-bool is_ready_to_transmit(void)
+bool is_ready_to_transmit(int8u port)
 {
-    return readyToTransmit;
+    return (readyToTransmit & (1 << port))? true: false;
 }
 
-void set_dyn_msg_received(bool status)
+void set_dyn_msg_received(int8u port,bool status)
 {
-    dynMsgReceived = status;
+    if(status)
+        dynMsgReceived |= (1 << port);
+    else 
+        dynMsgReceived &= ~(1 << port);  
 }
 
-bool is_dyn_msg_received(void)
+bool is_dyn_msg_received(int8u port)
 {
-    return dynMsgReceived;
+    return (dynMsgReceived & (1 << port))? true: false;
 }
 
 int8u get_dyn_rx_state(void)
 {
-    return dynRxState;
+#ifdef AVR_ATmega328P
+    return dynRx0State;
+#elif AVR_ATmega2560
+    switch (get_current_sci_port())
+    {
+        case SCI_PORT_0:
+            return dynRx0State;
+        case SCI_PORT_1:
+            return dynRx1State;
+        case SCI_PORT_2:
+            return dynRx2State;
+        case SCI_PORT_3:
+            return dynRx3State;
+        default:
+            return dynRx0State;
+    }
+#endif
 }
 
 void set_dyn_rx_state(int8u state)
 {
-    dynRxState = state;
+#ifdef AVR_ATmega328P
+    dynRx0State = state;
+#elif AVR_ATmega2560
+    switch (get_current_sci_port())
+    {
+        case SCI_PORT_0:
+            dynRx0State = state;
+            break;
+        case SCI_PORT_1:
+            dynRx1State = state;
+            break;
+        case SCI_PORT_2:
+            dynRx2State = state;
+            break;
+        case SCI_PORT_3:
+            dynRx3State = state;
+            break;
+        default:
+            dynRx0State = state;
+            break;
+    }
+#endif
 }
 
 void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata)
@@ -415,6 +571,7 @@ void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata)
     packet->checksum = 0;
 }
 
+/*
 void dyn_rx_packet_load(struct dyn_packet_t *packet)
 {
     dyn_rxpacket.header1 = packet->header1;
@@ -436,6 +593,7 @@ void dyn_tx_packet_load(struct dyn_packet_t *packet)
     dyn_txpacket.param = packet->param;
     dyn_txpacket.checksum = packet->checksum;
 }
+*/
 
 void dyn_test_int(void)
 {
@@ -475,52 +633,88 @@ void dyn_test_int(void)
 void dyn_test_servo(void)
 {
     static bool flip = true;
-    (flip)? CommsSendString(teststring1) : CommsSendString(teststring2);
+    (flip)? CommsSendString(SCI_PORT_1, teststring1) : CommsSendString(SCI_PORT_1, teststring2);
     flip = !flip;
 }
 
 void dyn_test_received_position(void)
 {
-    CommsSendString(teststring3);
+    CommsSendString(SCI_PORT_1, teststring3);
 }
 
-void dyn_packet_transmit(struct dyn_packet_t *packet)
+void dyn_packet_transmit(int8u port, struct dyn_packet_t *packet)
 {
     int8u count = 0;
-    SerialPutChar(packet->header1);
-    SerialPutChar(packet->header2);
-    SerialPutChar(packet->pid);
-    SerialPutChar(packet->plen);
-    SerialPutChar(packet->cmd);
+    SerialPutChar(port, packet->header1);
+    SerialPutChar(port, packet->header2);
+    SerialPutChar(port, packet->pid);
+    SerialPutChar(port, packet->plen);
+    SerialPutChar(port, packet->cmd);
     for(count = 0; count < (packet->plen - (int8u)2); count++)
-        SerialPutChar(packet->param[count]);
-    SerialPutChar(packet->checksum);
+        SerialPutChar(port, packet->param[count]);
+    SerialPutChar(port, packet->checksum);
 }
 
-void DynAx18aCheckTxComplete(void)
-{
-    if(get_tx_status())
-        digitalWrite(DYN_AX18A_DIR_PIN, LOW);
-}
+//void DynAx18aCheckTxComplete(void)
+//{
+//    if(get_tx_status())
+//        digitalWrite(DYN_AX18A_DIR_PIN, LOW);
+//}
 
-void dyn_ax_18a_end_tx(void)
+void dyn_ax_18a_end_tx(int8u port)
 {
-    set_tx_status(TRUE);
+    set_tx_status(port, TRUE);
+#ifdef AVR_ATmega328P
     digitalWrite(DYN_AX18A_DIR_PIN, LOW);
+#elif AVR_ATmega2560
+    switch (port)
+    {
+        case SCI_PORT_0:
+            digitalWrite(DYN_AX18A_DIR_PIN_0, LOW);
+            break;
+        case SCI_PORT_1:    
+            digitalWrite(DYN_AX18A_DIR_PIN_1, LOW);
+            break;
+        case SCI_PORT_2:    
+            digitalWrite(DYN_AX18A_DIR_PIN_2, LOW);
+            break;
+        case SCI_PORT_3:    
+            digitalWrite(DYN_AX18A_DIR_PIN_3, LOW);
+            break;
+    }
+#endif
 }
 
 
-void dyn_ax_18a_start_tx(void)
+void dyn_ax_18a_start_tx(int8u port)
 {
-    set_tx_status(FALSE);
+    set_tx_status(port,FALSE);
     //set_ready_to_transmit(FALSE);
+#ifdef AVR_ATmega328P
     digitalWrite(DYN_AX18A_DIR_PIN, HIGH);
+#elif AVR_ATmega2560
+    switch (port)
+    {
+        case SCI_PORT_0:
+            digitalWrite(DYN_AX18A_DIR_PIN_0, HIGH);
+            break;
+        case SCI_PORT_1:    
+            digitalWrite(DYN_AX18A_DIR_PIN_1, HIGH);
+            break;
+        case SCI_PORT_2:    
+            digitalWrite(DYN_AX18A_DIR_PIN_2, HIGH);
+            break;
+        case SCI_PORT_3:    
+            digitalWrite(DYN_AX18A_DIR_PIN_3, HIGH);
+            break;
+    }
+#endif
 }
 
 
-//Dynemixcel transmit packet creation fro different purposes//
+//Dynemixcel transmit packet creation for different purposes//
 
-void dyn_packet_goal_pos(int8u add, int16u value)
+void dyn_packet_goal_pos(struct dyn_packet_t *packet, int8u add, int16u value)
 {
     int8u cksm = 0;
     int8u dynReg = DYN_REG_GOAL_POSITION;
@@ -530,31 +724,31 @@ void dyn_packet_goal_pos(int8u add, int16u value)
     else
         setPoint = value;
 
-    dyn_txpacket.header1 = DYN_PACKET_HEADER1;
-    dyn_txpacket.header2 = DYN_PACKET_HEADER2;
-    dyn_txpacket.pid = add;
-    dyn_txpacket.plen = 0x05;
-    dyn_txpacket.cmd = DYN_PACKET_INST_WRITE;
-    dyn_txpacket.param[0] = dynReg;
-    dyn_txpacket.param[1] = (int8u)(0xFF & setPoint);
-    dyn_txpacket.param[2] = (int8u)(0xFF & (setPoint >> 8));
+    packet->header1 = DYN_PACKET_HEADER1;
+    packet->header2 = DYN_PACKET_HEADER2;
+    packet->pid = add;
+    packet->plen = 0x05;
+    packet->cmd = DYN_PACKET_INST_WRITE;
+    packet->param[0] = dynReg;
+    packet->param[1] = (int8u)(0xFF & setPoint);
+    packet->param[2] = (int8u)(0xFF & (setPoint >> 8));
     //cksm = dyn_cheksum_generate(&dyn_txpacket);
-    dyn_cheksum_generate(&dyn_txpacket);
+    dyn_cheksum_generate(packet);
 }
 
-void dyn_packet_read_pos(int8u add)
+void dyn_packet_read_pos(struct dyn_packet_t *packet, int8u add)
 {
     int8u cksm = 0;
     int8u dynReg = DYN_REG_PRESENT_POSITION;
 
-    dyn_txpacket.header1 = DYN_PACKET_HEADER1;
-    dyn_txpacket.header2 = DYN_PACKET_HEADER2;
-    dyn_txpacket.pid = add;
-    dyn_txpacket.plen = 0x04;
-    dyn_txpacket.cmd = DYN_PACKET_INST_READ;
-    dyn_txpacket.param[0] = dynReg;
-    dyn_txpacket.param[1] = 2;//regTable[dynReg].size;
+    packet->header1 = DYN_PACKET_HEADER1;
+    packet->header2 = DYN_PACKET_HEADER2;
+    packet->pid = add;
+    packet->plen = 0x04;
+    packet->cmd = DYN_PACKET_INST_READ;
+    packet->param[0] = dynReg;
+    packet->param[1] = 2;//regTable[dynReg].size;
     //cksm = dyn_cheksum_generate(&dyn_txpacket);
-    dyn_cheksum_generate(&dyn_txpacket);
+    dyn_cheksum_generate(packet);
     //dyn_txpacket.checksum = cksm;
 }

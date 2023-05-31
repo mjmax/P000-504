@@ -78,6 +78,8 @@ struct t_fifo_ctl rSioTx3BufferCtl;
 
 static bool  bTxIdle = 0;
 
+int8u currentSciPort = SCI_PORT_0;
+
 int8u finalMsgCount = 0;
 char message[BUFFER_SIZE];
 
@@ -103,10 +105,6 @@ void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u sto
   	uint16_t baudpscaler;
 	bool clk2xmode = false;
 
-	/* Initialize the buffers */
-  	FifoInit(&rSioRx1BufferCtl, aucSioRx1Buffer, SIO_RX1_BUF_SIZE);
-  	FifoInit(&rSioTx1BufferCtl, aucSioTx1Buffer, SIO_TX1_BUF_SIZE);
-
 	/*Disable global interrupts*/
 	cli();
 
@@ -127,6 +125,9 @@ void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u sto
 	{
 		case SCI_PORT_0:
 			UCSR0B = 0x00; 	//disable while setting baud rate
+			/* Initialize the buffers */
+  			FifoInit(&rSioRx0BufferCtl, aucSioRx0Buffer, SIO_RX0_BUF_SIZE);
+  			FifoInit(&rSioTx0BufferCtl, aucSioTx0Buffer, SIO_TX0_BUF_SIZE);
 			/* Set Async, parity, data and stop bits */
 			ctrlc = UCSR0C;
 			ctrlc |= (NONE == parity) ? (0<<UPM00) : (EVEN == parity) ? (2<<UPM00) : (3<<UPM00);
@@ -144,6 +145,9 @@ void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u sto
 		#ifdef AVR_ATmega2560
 		case SCI_PORT_1:
 			UCSR1B = 0x00; 	//disable while setting baud rate
+			/* Initialize the buffers */
+  			FifoInit(&rSioRx1BufferCtl, aucSioRx1Buffer, SIO_RX1_BUF_SIZE);
+  			FifoInit(&rSioTx1BufferCtl, aucSioTx1Buffer, SIO_TX1_BUF_SIZE);
 			/* Set Async, parity, data and stop bits */
 			ctrlc = UCSR1C;
 			ctrlc |= (NONE == parity) ? (0<<UPM10) : (EVEN == parity) ? (2<<UPM10) : (3<<UPM10);
@@ -160,6 +164,9 @@ void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u sto
 			break;
 		case SCI_PORT_2:
 			UCSR2B = 0x00; 	//disable while setting baud rate
+			/* Initialize the buffers */
+  			FifoInit(&rSioRx2BufferCtl, aucSioRx2Buffer, SIO_RX2_BUF_SIZE);
+  			FifoInit(&rSioTx2BufferCtl, aucSioTx2Buffer, SIO_TX2_BUF_SIZE);
 			/* Set Async, parity, data and stop bits */
 			ctrlc = UCSR2C;
 			ctrlc |= (NONE == parity) ? (0<<UPM20) : (EVEN == parity) ? (2<<UPM20) : (3<<UPM20);
@@ -176,6 +183,9 @@ void SerialInit(int8u port, int32u baud, int8u parity, int8u databits, int8u sto
 			break;
 		case SCI_PORT_3:
 			UCSR3B = 0x00; 	//disable while setting baud rate
+			/* Initialize the buffers */
+  			FifoInit(&rSioRx3BufferCtl, aucSioRx3Buffer, SIO_RX3_BUF_SIZE);
+  			FifoInit(&rSioTx3BufferCtl, aucSioTx3Buffer, SIO_TX3_BUF_SIZE);
 			/* Set Async, parity, data and stop bits */
 			ctrlc = UCSR3C;
 			ctrlc |= (NONE == parity) ? (0<<UPM30) : (EVEN == parity) ? (2<<UPM30) : (3<<UPM30);
@@ -222,44 +232,70 @@ int8u sci_get_new_message(void)
 	return	finalMsgCount;
 }
 
-void set_tx_status(int8u status)
+void set_tx_status(int8u port,int8u status)
 {
-	bTxIdle = status;
+	bTxIdle = (status << port);
 }
 
-bool get_tx_status(void)
+bool get_tx_status(int8u port)
 {
-	return bTxIdle;
+	return (bTxIdle & (1 << port))? true : false;
 }
 
-
-void SerialPutChar(char ch)
+void set_current_sci_port(int8u port)
 {
-	FifoPutChar(&rSioTx1BufferCtl, (int8u)ch);
+	currentSciPort = port;
 }
 
-
-void SerialPut(unsigned char *ptr, unsigned char length)
+int8u get_current_sci_port(void)
 {
-	while (length--)
+	return currentSciPort;
+}
+
+void SerialPutChar(int8u port,char ch)
+{
+	switch (port)
 	{
-		SerialPutChar(*ptr++);
+		case SCI_PORT_0:
+			FifoPutChar(&rSioTx0BufferCtl, (int8u)ch);
+			break;
+		case SCI_PORT_1:
+			FifoPutChar(&rSioTx1BufferCtl, (int8u)ch);
+			break;
+		case SCI_PORT_2:
+			FifoPutChar(&rSioTx2BufferCtl, (int8u)ch);
+			break;
+		case SCI_PORT_3:
+			FifoPutChar(&rSioTx3BufferCtl, (int8u)ch);
+			break;
+		default:
+			FifoPutChar(&rSioTx0BufferCtl, (int8u)ch);
+			break;
 	}
 }
 
 
-void SerialPutStr(char *str)
+void SerialPut(int8u port, unsigned char *ptr, unsigned char length)
+{
+	while (length--)
+	{
+		SerialPutChar(port, *ptr++);
+	}
+}
+
+
+void SerialPutStr(int8u port,char *str)
 {
 	while (!(*str == '\0'))
 	{
 			//UDR = *str++;
-		SerialPutChar(*str++);
+		SerialPutChar(port, *str++);
 	}
 }
 
-void CommsSendString(char *reply) // this is to match the current code
+void CommsSendString(int8u port,char *reply) // this is to match the current code
 {
-	SerialPutStr(reply);
+	SerialPutStr(port, reply);
 }
 
 void flushBuffer(int8u buffer)
@@ -312,6 +348,7 @@ void TrySendCh(void)
   	}
   	else
   		UCSR0B &= ~(1 << UDRIE0);
+		
 #ifdef AVR_ATmega2560
   	if(FifoIsEmpty(&rSioTx1BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
   	{
@@ -367,16 +404,90 @@ void ReadSerial(void)
 {
 	int8u ch;
 	int8u temp;
-	char str[20];
+	int8u cport;
 	bool bDynPacket = false;
 
+
+	if(FifoIsEmpty(&rSioRx0BufferCtl) == 0)
+	{
+		ch = FifoGetChar(&rSioRx0BufferCtl);
+		//state machine implmentation to detect dynamixel packet
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_0);
+		runDynStateMachine(ch);
+		set_current_sci_port(cport);
+	}
+#ifdef AVR_ATmega2560
 	if(FifoIsEmpty(&rSioRx1BufferCtl) == 0)
 	{
 		ch = FifoGetChar(&rSioRx1BufferCtl);
 		//state machine implmentation to detect dynamixel packet
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_1);
 		runDynStateMachine(ch);
-		//dyneReadSerial(ch);
+		set_current_sci_port(cport);
 	}
+
+	if(FifoIsEmpty(&rSioRx2BufferCtl) == 0)
+	{
+		ch = FifoGetChar(&rSioRx2BufferCtl);
+		//state machine implmentation to detect dynamixel packet
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_2);
+		runDynStateMachine(ch);
+		set_current_sci_port(cport);
+	}
+
+	if(FifoIsEmpty(&rSioRx3BufferCtl) == 0)
+	{
+		ch = FifoGetChar(&rSioRx3BufferCtl);
+		//state machine implmentation to detect dynamixel packet
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_3);
+		runDynStateMachine(ch);
+		set_current_sci_port(cport);
+	}
+#endif
+}
+
+void ProcessRxPacket(void)
+{
+	int8u cport;
+
+	if(is_dyn_msg_received(SCI_PORT_0))
+	{
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_0);
+		dynRxPacketProcess();
+		set_current_sci_port(cport);
+		//CommsSendString("TesPass\r\n");
+	}
+#ifdef AVR_ATmega2560
+	if(is_dyn_msg_received(SCI_PORT_1))
+	{
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_1);
+		dynRxPacketProcess();
+		set_current_sci_port(cport);
+		//CommsSendString("TesPass\r\n");
+	}
+	if(is_dyn_msg_received(SCI_PORT_2))
+	{
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_2);
+		dynRxPacketProcess();
+		set_current_sci_port(cport);
+		//CommsSendString("TesPass\r\n");
+	}
+	if(is_dyn_msg_received(SCI_PORT_3))
+	{
+		cport = get_current_sci_port();
+		set_current_sci_port(SCI_PORT_3);
+		dynRxPacketProcess();
+		set_current_sci_port(cport);
+		//CommsSendString("TesPass\r\n");
+	}
+#endif
 }
 
 void SerialGetMsg(char *ptr)
@@ -416,16 +527,11 @@ unsigned long SerialGetLong(void)
 #endif
 }
 
-void SerialHandler(void)
+void SerialIncommingHandler(void)
 {
-	
 	//memset(message, '\0', arlen(message));
 	ReadSerial();
-	if(is_dyn_msg_received())
-	{
-		dynRxPacketProcess();
-		//CommsSendString("TesPass\r\n");
-	}
+	ProcessRxPacket();
 }
 
 
@@ -449,7 +555,7 @@ ISR(USART_RX_vect)
 	if ((ucStatus & err) == 0x00)
 	{ 
 		/* only store if no errors (any of FE, DOR, PE will fail write) */
-		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+		FifoPutChar(&rSioRx0BufferCtl, ucCh); /* if no space, this will not store */
 		/* Count the number of messages received */
 		//SerialPutChar(ucCh);
 		//if(is_last_char(ucCh))
@@ -462,10 +568,10 @@ ISR(USART_RX_vect)
 /* USART0, Data Register Empty Interrupt handler*/
 ISR(USART_UDRE_vect)
 {
-	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	if (FifoIsEmpty(&rSioTx0BufferCtl) == 0)
 	{ /* data still in current stream */
-		dyn_ax_18a_start_tx();
-		UDR0 = FifoGetChar(&rSioTx1BufferCtl);
+		dyn_ax_18a_start_tx(SCI_PORT_0);
+		UDR0 = FifoGetChar(&rSioTx0BufferCtl);
 		UCSR0A |= (1 << TXC0);
 	}
 	else
@@ -480,8 +586,8 @@ ISR(USART_UDRE_vect)
 /* USART0, Tx Complete Interrupt handler*/
 ISR(USART_TX_vect)
 	{ /* whatever was being transmitted has completed */
-	set_tx_status(TRUE);
-	dyn_ax_18a_end_tx();
+	set_tx_status(SCI_PORT_0,TRUE);
+	dyn_ax_18a_end_tx(SCI_PORT_0);
 	/* disable this interrupt */
 	UCSR0B &= ~(1 << TXCIE0);
 }
@@ -513,7 +619,7 @@ ISR(USART1_UDRE_vect)
 {
 	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
 	{ /* data still in current stream */
-		dyn_ax_18a_start_tx();
+		dyn_ax_18a_start_tx(SCI_PORT_1);
 		UDR1 = FifoGetChar(&rSioTx1BufferCtl);
 		UCSR1A |= (1 << TXC1);
 	}
@@ -529,8 +635,8 @@ ISR(USART1_UDRE_vect)
 /* USART1, Tx Complete Interrupt handler*/
 ISR(USART1_TX_vect)
 	{ /* whatever was being transmitted has completed */
-	set_tx_status(TRUE);
-	dyn_ax_18a_end_tx();
+	set_tx_status(SCI_PORT_1,TRUE);
+	dyn_ax_18a_end_tx(SCI_PORT_1);
 	/* disable this interrupt */
 	UCSR1B &= ~(1 << TXCIE1);
 }
@@ -550,7 +656,7 @@ ISR(USART2_RX_vect)
 	if ((ucStatus & err) == 0x00)
 	{ 
 		/* only store if no errors (any of FE, DOR, PE will fail write) */
-		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+		FifoPutChar(&rSioRx2BufferCtl, ucCh); /* if no space, this will not store */
 	}
 
 	sei(); // Enable global interrupts
@@ -559,10 +665,10 @@ ISR(USART2_RX_vect)
 /* USART2, Data Register Empty Interrupt handler*/
 ISR(USART2_UDRE_vect)
 {
-	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	if (FifoIsEmpty(&rSioTx2BufferCtl) == 0)
 	{ /* data still in current stream */
-		dyn_ax_18a_start_tx();
-		UDR2 = FifoGetChar(&rSioTx1BufferCtl);
+		dyn_ax_18a_start_tx(SCI_PORT_2);
+		UDR2 = FifoGetChar(&rSioTx2BufferCtl);
 		UCSR2A |= (1 << TXC2);
 	}
 	else
@@ -577,8 +683,8 @@ ISR(USART2_UDRE_vect)
 /* USART2, Tx Complete Interrupt handler*/
 ISR(USART2_TX_vect)
 	{ /* whatever was being transmitted has completed */
-	set_tx_status(TRUE);
-	dyn_ax_18a_end_tx();
+	set_tx_status(SCI_PORT_2,TRUE);
+	dyn_ax_18a_end_tx(SCI_PORT_2);
 	/* disable this interrupt */
 	UCSR2B &= ~(1 << TXCIE2);
 }
@@ -598,7 +704,7 @@ ISR(USART3_RX_vect)
 	if ((ucStatus & err) == 0x00)
 	{ 
 		/* only store if no errors (any of FE, DOR, PE will fail write) */
-		FifoPutChar(&rSioRx1BufferCtl, ucCh); /* if no space, this will not store */
+		FifoPutChar(&rSioRx3BufferCtl, ucCh); /* if no space, this will not store */
 	}
 
 	sei(); // Enable global interrupts
@@ -607,10 +713,10 @@ ISR(USART3_RX_vect)
 /* USART3, Data Register Empty Interrupt handler*/
 ISR(USART3_UDRE_vect)
 {
-	if (FifoIsEmpty(&rSioTx1BufferCtl) == 0)
+	if (FifoIsEmpty(&rSioTx3BufferCtl) == 0)
 	{ /* data still in current stream */
-		dyn_ax_18a_start_tx();
-		UDR3 = FifoGetChar(&rSioTx1BufferCtl);
+		dyn_ax_18a_start_tx(SCI_PORT_3);
+		UDR3 = FifoGetChar(&rSioTx3BufferCtl);
 		UCSR3A |= (1 << TXC3);
 	}
 	else
@@ -625,8 +731,8 @@ ISR(USART3_UDRE_vect)
 /* USART3, Tx Complete Interrupt handler*/
 ISR(USART3_TX_vect)
 	{ /* whatever was being transmitted has completed */
-	set_tx_status(TRUE);
-	dyn_ax_18a_end_tx();
+	set_tx_status(SCI_PORT_3,TRUE);
+	dyn_ax_18a_end_tx(SCI_PORT_3);
 	/* disable this interrupt */
 	UCSR3B &= ~(1 << TXCIE3);
 }
