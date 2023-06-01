@@ -58,7 +58,7 @@ NOTES:
 //        are important, the count checked.
 //
 
-extern int8u ucTimer0Expired;
+extern int16u ucTimer0Expired;
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -75,6 +75,8 @@ extern int8u ucTimer0Expired;
 //
 
 void Timer0Init(t_vpf vpf);
+
+int16u millis(void);
 
 
 #endif // _TIMER0H_

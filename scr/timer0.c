@@ -48,7 +48,7 @@ static const uint16_t tc0_divider_value[NUM_TC0_DIVIDERS] PROGMEM =
 
 static t_vpf t0func = (t_vpf)NULL;
 
-int8u ucTimer0Expired;
+int16u ucTimer0Expired;
 
 /** The calculated reload value to be loaded into TCNT0 */
 static uint8_t tc0_reload;
@@ -98,6 +98,11 @@ void Timer0Init(t_vpf vpf)
 
   /* Enable timer 0 interrupt */
   TIMSK0 |= (1 << TOIE0);
+}
+
+int16u millis(void)
+{
+  return ucTimer0Expired;
 }
 
 

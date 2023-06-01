@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <util/delay.h>
 
 
@@ -29,7 +30,8 @@ char teststring1[20];
 char teststring2[20];
 char teststring3[20];
 
-int16u motorPos[BUFFER_SIZE];
+//int16u motorPos[BUFFER_SIZE];
+int16u motorPos[] = {1, 2, 3, 4, 5, 6, 7, 8};
 int8u dynErr = 0;
 bool readyToTransmit = false;
 
@@ -153,34 +155,39 @@ void DynAx18aInit(void)
 void dynRxPacketProcess(void)
 {
     int8u cport = get_current_sci_port();
-    struct dyn_packet_t *packet = &dyn_rx0packet;
+    struct dyn_packet_t *txPacket = &dyn_tx0packet;
+    struct dyn_packet_t *rxPacket = &dyn_rx0packet;
     
     debug_blink();
 #ifdef AVR_ATmega2560
     switch(cport)
     {
         case SCI_PORT_0:
-            packet = &dyn_rx0packet;
+            txPacket = &dyn_tx0packet;
+            rxPacket = &dyn_rx0packet;
             break;
         case SCI_PORT_1:
-            packet = &dyn_rx1packet;
+            txPacket = &dyn_tx1packet;
+            rxPacket = &dyn_rx1packet;
             break;
         case SCI_PORT_2:
-            packet = &dyn_rx2packet;
+            txPacket = &dyn_tx2packet;
+            rxPacket = &dyn_rx2packet;
             break;
         case SCI_PORT_3:
-            packet = &dyn_rx3packet;
+            txPacket = &dyn_tx3packet;
+            rxPacket = &dyn_rx3packet;
             break;
     }
 #endif
-    switch(packet->cmd)
+    switch(txPacket->param[0])
     {
         case DYN_PACKET_INST_PING:
         case DYN_REG_GOAL_POSITION:
-            dynErr = packet->cmd; //dyn_rxpacket.cmd is the corresponding instruction for transmission and corresponding error for reception
+            dynErr = rxPacket->cmd; //dyn_rxpacket.cmd is the corresponding instruction for transmission and corresponding error for reception
             break;
         case DYN_REG_PRESENT_POSITION:
-            motorPos[packet->pid] = (packet->param[0] + (packet->param[1] << 8));
+            motorPos[rxPacket->pid] = (rxPacket->param[0] + (rxPacket->param[1] << 8));
             break;
         /*TO DO*/
     }
@@ -634,6 +641,22 @@ void dyn_tx_packet_load(struct dyn_packet_t *packet)
     dyn_txpacket.checksum = packet->checksum;
 }
 */
+
+void dyn_test_motor_pos_val(void)
+{
+    char buffer[100];
+    char temp1[6], temp2[6], temp3[6], temp4[6], temp5[6], temp6[6];
+
+    utoa((unsigned int)motorPos[1], temp1, 5);
+    utoa((unsigned int)motorPos[2], temp2, 5);
+    utoa((unsigned int)motorPos[3], temp3, 5);
+    utoa((unsigned int)motorPos[4], temp4, 5);
+    utoa((unsigned int)motorPos[5], temp5, 5);
+    utoa((unsigned int)motorPos[6], temp6, 5);
+
+    sprintf(buffer, "M1: %s, M2: %s, M3: %s, M4: %s, M5: %s, M6: %s\r\n", temp1, temp2, temp3, temp4, temp5, temp6);
+    CommsSendString(SCI_PORT_0,buffer);
+}
 
 void dyn_test_int(void)
 {

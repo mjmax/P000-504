@@ -135,6 +135,7 @@ bool is_dyn_msg_received(int8u port);
 void dyn_packet_init(struct dyn_packet_t *packet, int8u *pdata);
 //void dyn_rx_packet_load(struct dyn_packet_t *packet);
 //void dyn_tx_packet_load(struct dyn_packet_t *packet);
+void dyn_test_motor_pos_val(void);
 void dyn_test_int(void);
 void dyn_test_servo(void);
 void dyne_test_echo_rx_packet(int8u port,struct dyn_packet_t *packet);

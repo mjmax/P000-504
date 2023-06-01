@@ -5,6 +5,7 @@
 #include "iocontrol.h"
 #include "dyn_ax18a.h"
 #include "debug.h"
+#include "controller.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -27,13 +28,21 @@ void bg_100(void)
 
 void bg_1000(void)
 {
+    static int8u sec = 0;
+    int8u samplingTime = 20;
     //CommsSendString(SCI_PORT_0,"SerialHandler\r\n");
     //SerialHandler();
     //dyn_test_servo();
     //dyn_test_received_position();
-    set_ready_to_sample(SCI_PORT_1, true);
-    set_ready_to_sample(SCI_PORT_2, true);
-    set_ready_to_sample(SCI_PORT_3, true);
+    sec++;
+    if(sec>=samplingTime)
+    {
+        set_ready_to_sample(SCI_PORT_1, true);
+        set_ready_to_sample(SCI_PORT_2, true);
+        set_ready_to_sample(SCI_PORT_3, true);
+        set_ready_to_send(true);
+        sec = 0;
+    }
 
 }
 
@@ -89,6 +98,7 @@ int main(void)
     while(1)
     {
         //_delay_ms(1000);
+        test_control();
         SerialIncommingHandler();
     	DynTxPacketProcess();
         
