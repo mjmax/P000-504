@@ -12,6 +12,7 @@
         "types.h": "c",
         "stdio.h": "c",
         "stddef.h": "c",
-        "debug.h": "c"
+        "debug.h": "c",
+        "time.h": "c"
     }
 }
