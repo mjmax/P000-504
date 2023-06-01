@@ -190,97 +190,100 @@ void dynRxPacketProcess(void)
 
 void DynTxPacketProcess(void)
 {
-    int8u state;
-    static bool highPos = true;
+    int8u state, cport, beginId;
+    static bool highPos[MAX_SCI_PORT] = {true, true, true, true};
     struct dyn_packet_t *packet;
 
-    int8u cport = SCI_PORT_3;   // configurable port to drive the motor
+    int8u prevport = get_current_sci_port();
+    int8u startPort = SCI_PORT_1;
+    int8u endPort = SCI_PORT_2;
 
-    switch (cport)
+    for (cport = startPort; cport <= endPort; cport++)
     {
-        case SCI_PORT_0:
-            packet = &dyn_tx0packet;
-            break;
-        case SCI_PORT_1:
-            packet = &dyn_tx1packet;
-            break;
-        case SCI_PORT_2:
-            packet = &dyn_tx2packet;
-            break;
-        case SCI_PORT_3:
-            packet = &dyn_tx3packet;
-            break;
-        default:
-            packet = &dyn_tx0packet;
-            break;
-    }
-
-    if(is_ready_to_transmit(cport))
-    {
-        //CommsSendString(SCI_PORT_0, "TestPassed\r\n");
-        state = get_dyn_tx_state();
-        switch (state)
+        set_current_sci_port(cport);
+        switch (cport)
         {
-        case IDLE_TX:
-            if(is_ready_to_sample(cport))
-            {
-                set_dyn_tx_state(READ_M1_POS);
-                set_ready_to_sample(cport, false);
-            }
-            break;
-        case SET_M1_POS:
-            if(highPos)
-            {
-                dyn_packet_goal_pos(packet, 1, 1023);
-            }
-            else
-                dyn_packet_goal_pos(packet, 1, 512);
-            set_dyn_tx_state(SET_M2_POS);  
-            break;
-        case SET_M2_POS:
-            if(highPos)
-            {
-                dyn_packet_goal_pos(packet, 2, 1023);
-            }
-            else
-                dyn_packet_goal_pos(packet, 2, 512);
-            set_dyn_tx_state(SET_M3_POS);  
-            break;
-        case SET_M3_POS:
-            if(highPos)
-            {
-                dyn_packet_goal_pos(packet, 3, 1023);
-            }
-            else
-                dyn_packet_goal_pos(packet, 3, 512);
-            highPos = !highPos;
-            set_dyn_tx_state(IDLE_TX);  
-            break;
-        case EXECUTE:
-            break;
-        case READ_M1_POS:
-            dyn_packet_read_pos(packet, 1);
-            set_dyn_tx_state(READ_M2_POS);
-            break;
-        case READ_M2_POS:
-            dyn_packet_read_pos(packet, 2);
-            set_dyn_tx_state(READ_M3_POS);
-            break;
-        case READ_M3_POS:
-            dyn_packet_read_pos(packet, 3);
-            set_dyn_tx_state(SET_M1_POS);   
-            break;
-        
-        default:
-            break;
+            case SCI_PORT_0:
+                beginId = 1;
+                packet = &dyn_tx0packet;
+                break;
+            case SCI_PORT_1:
+                beginId = 1;
+                packet = &dyn_tx1packet;
+                break;
+            case SCI_PORT_2:
+                beginId = 3;
+                packet = &dyn_tx2packet;
+                break;
+            case SCI_PORT_3:
+                beginId = 5;
+                packet = &dyn_tx3packet;
+                break;
+            default:
+                beginId = 1;
+                packet = &dyn_tx0packet;
+                break;
         }
 
-        if(state != IDLE_TX)
+        if(is_ready_to_transmit(cport))
         {
-            dyn_packet_transmit(cport, packet);
-            set_ready_to_transmit(cport, false);
+            //CommsSendString(SCI_PORT_0, "TestPassed\r\n");
+            state = get_dyn_tx_state();
+            switch (state)
+            {
+            case IDLE_TX:
+                if(is_ready_to_sample(cport))
+                {
+                    set_dyn_tx_state(READ_M1_POS);
+                    set_ready_to_sample(cport, false);
+                }
+                break;
+            case SET_M1_POS:
+                if(highPos[cport])
+                {
+                    dyn_packet_goal_pos(packet, beginId, 1023);
+                }
+                else
+                    dyn_packet_goal_pos(packet, beginId, 512);
+                set_dyn_tx_state(SET_M2_POS);  
+                break;
+            case SET_M2_POS:
+                if(highPos[cport])
+                {
+                    dyn_packet_goal_pos(packet, (beginId + 1), 1023);
+                }
+                else
+                    dyn_packet_goal_pos(packet, (beginId + 1), 512);
+                highPos[cport] = !highPos[cport];
+                set_dyn_tx_state(IDLE_TX); 
+                break;
+            case SET_M3_POS: 
+                break;
+            case EXECUTE:
+                break;
+            case READ_M1_POS:
+                dyn_packet_read_pos(packet, beginId);
+                set_dyn_tx_state(READ_M2_POS);
+                break;
+            case READ_M2_POS:
+                dyn_packet_read_pos(packet, (beginId + 1));
+                set_dyn_tx_state(SET_M1_POS); 
+                break;
+            case READ_M3_POS:  
+                break;
+            
+            default:
+                break;
+            }
+
+            if(state != IDLE_TX)
+            {
+                dyn_packet_transmit(cport, packet);
+                set_ready_to_transmit(cport, false);
+            }
         }
     }
+    set_current_sci_port(prevport);
 }
 
 bool is_ready_to_sample(int8u port)
@@ -479,12 +482,49 @@ bool dyn_checksum_validate(struct dyn_packet_t *packet)
 
 void set_dyn_tx_state(int8u state)
 {
-    dynTx1State = state;
+#ifdef AVR_ATmega328P
+    dynTx0State = state;
+#elif AVR_ATmega2560
+    switch (get_current_sci_port())
+    {
+        case SCI_PORT_0:
+            dynTx0State = state;
+            break;
+        case SCI_PORT_1:
+            dynTx1State = state;
+            break;
+        case SCI_PORT_2:
+            dynTx2State = state;
+            break;
+        case SCI_PORT_3:
+            dynTx3State = state;
+            break;
+        default:
+            dynTx0State = state;
+            break;
+    }
+#endif
 }
 
 int8u get_dyn_tx_state(void)
 {
-    return dynTx1State;
+#ifdef AVR_ATmega328P
+    return dynTx0State;
+#elif AVR_ATmega2560
+    switch (get_current_sci_port())
+    {
+        case SCI_PORT_0:
+            return dynTx0State;
+        case SCI_PORT_1:
+            return dynTx1State;
+        case SCI_PORT_2:
+            return dynTx2State;
+        case SCI_PORT_3:
+            return dynTx3State;
+        default:
+            return dynTx0State;
+    }
+#endif
 }
 
 void set_ready_to_transmit(int8u port, bool status)
