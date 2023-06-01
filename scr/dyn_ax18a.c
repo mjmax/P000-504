@@ -196,7 +196,7 @@ void DynTxPacketProcess(void)
 
     int8u prevport = get_current_sci_port();
     int8u startPort = SCI_PORT_1;
-    int8u endPort = SCI_PORT_2;
+    int8u endPort = SCI_PORT_3;
 
     for (cport = startPort; cport <= endPort; cport++)
     {
