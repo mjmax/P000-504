@@ -9,21 +9,18 @@ NOTES:          Due to potential corruption, many of these functions will
 ***********************************************************************/
 
 #include "avrdet.h"
+#include "types.h"
+#include "fifo.h"
+#include "asciidef.h"
+#include "iocontrol.h"
+#include "serial.h"
+#include "dyn_ax18a.h"
+#include "debug.h"
+
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <string.h>
-#include "types.h"
-//#include "debug.h"
-#include "fifo.h"
-//#include "hw_spec.h"
-//#include "main.h"
-#include "asciidef.h"
-#include "iocontrol.h"
-#include "command.h"
-#include "serial.h"
-#include "dyn_ax18a.h"
-#include "debug.h"
 
 #ifdef AVR_ATmega2560
 #define USART_UDRE_vect USART0_UDRE_vect
@@ -348,7 +345,7 @@ void TrySendCh(void)
   	}
   	else
   		UCSR0B &= ~(1 << UDRIE0);
-		
+
 #ifdef AVR_ATmega2560
   	if(FifoIsEmpty(&rSioTx1BufferCtl) == 0) /* channel has data */ /* channel is 'allowed' to tx */
   	{

@@ -19,6 +19,8 @@
 #endif
 #endif
 
+#define SOFTWARE_VRESION_MAIN "V0.50"
+
 #define NULL ((void *)0)
 
 #endif /* AVRDET_H_ */

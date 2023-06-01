@@ -5,14 +5,11 @@
  *      Author: Janaka Madhusankha
  */
 #include "avrdet.h"
-#include <avr/io.h>
-#include <avr/interrupt.h>
 #include "types.h"
 #include "iocontrol.h"
-#include "command.h"
-//#include "registers.h"
-//#include "eeprom.h"
-//#include "eeprom_map.h"
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
 #define DIRB DDRB
 #define DIRC DDRC

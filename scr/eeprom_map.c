@@ -9,7 +9,6 @@ NOTES:
 ***********************************************************************/
 #include "avrdet.h"
 #include "types.h"       /* typedefs                                  */
-//#include "debug.h"
 #include "eeprom_map.h"
 
 

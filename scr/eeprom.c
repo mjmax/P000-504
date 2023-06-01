@@ -14,13 +14,13 @@ LOW_LEVEL_EEPROM_BYTE_FUNCTIONS in your Makefile or Project.
 
 ***************************************************************************************************/
 #include "avrdet.h"
+#include "types.h"
+#include "eeprom.h"
+
 #include <stddef.h>
 #include <string.h>
 #include <avr/io.h>
 #include <avr/wdt.h>
-#include "types.h"
-//#include "debug.h"
-#include "eeprom.h"
 
 
 ////////////////////////////////////////////////////////////////////////

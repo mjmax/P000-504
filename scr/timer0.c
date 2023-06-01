@@ -12,16 +12,13 @@ NOTES:
 
 ***********************************************************************/
 #include "avrdet.h"
+#include "types.h"
+#include "timer0.h"
+
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <stdint.h>
-//#include "debug.h"
-#include "types.h"
-//#include "main.h"
-//#include "hw_spec.h"
-
-#include "timer0.h"
 
 
 /* Timer counter 0 clock sources */

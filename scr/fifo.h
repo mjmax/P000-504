@@ -176,7 +176,7 @@ int8u FifoIsEmpty(struct t_fifo_ctl *psBufferStruct);
 //                !!Disables interrupts globally!!
 //
 
-bool FifoGetLastChar(struct t_fifo_ctl *psBufferStruct, uint8_t *data);
+bool FifoGetLastChar(struct t_fifo_ctl *psBufferStruct, int8u *data);
 
 
 #endif // _FIFOH_

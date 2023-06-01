@@ -11,8 +11,6 @@ NOTES:
 #ifndef _EEPROMMAPH_
 #define __EEPROMMAPH_
 
-//#include "cmd_tag.h"
-//#include "rb_msg.h"
 #include "types.h"
 
 
